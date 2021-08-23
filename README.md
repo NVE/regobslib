@@ -15,6 +15,13 @@ This client library aim to simplify interaction with the Regobs API v5.
   * [NVE Field Book](https://www.varsom.no/media/2265/nve-forsvaret_feltha-ndbok_innmat_v1.pdf)
   * [Observation Guidelines and Recording Standards for Weather, Snowpack and Avalanches](https://www.avalancheassociation.ca/resource/resmgr/standards_docs/ogrs2016web.pdf)
   * [Snow, Weather and Avalanches](https://static1.squarespace.com/static/59d2a0f0e9bfdf20d6d654b7/t/5a1af2a5652dea2e1a5ea055/1511715529879/AAA_SWAG_Web+2.pdf)
+
+## Installation
+
+To install using `pip`:
+```
+pip install regobslib
+```
  
 ## Example programs
 
@@ -51,17 +58,15 @@ stored_reg = connection.submit(reg, Connection.Language.ENGLISH)
 pprint.pprint(stored_reg)
 ```
 
-For a more extensive demonstration, refer to [demo.py](demo.py).
+For a more extensive demonstration, refer to [demo.py](https://github.com/NVE/regobslib/blob/master/demo.py).
 
 ## Documentation
 
 We have yet to write documentation, but the function declarations
 are written with type hints and most parameters are enums, so the code in
-[submit.py](src/regobslib/submit.py) may help you on your way. A properly set
+[submit.py](https://github.com/NVE/regobslib/blob/master/src/regobslib/submit.py) may help you on your way. A properly set
 up IDE will also use the type hints and enums to inform you about your
 alternatives.
 
 You can also use GitHubs built-in code navigation to quickly find the
-definition of a class or method in the [example code](demo.py):
-
-![GitHub code navigation](imgs/code_navigation.png)
+definition of a class or method in the [example code](https://github.com/NVE/regobslib/blob/master/demo.py).
