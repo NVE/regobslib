@@ -1,12 +1,15 @@
 """Classes representing the submission forms in Regobs v5
 """
 
+# To enable postponed evaluation of annotations (default for 3.10)
 from __future__ import annotations
+
+from enum import IntEnum, Enum
+from typing import Optional, List
+import datetime as dt
+
 from .misc import TZ, NoObservationError, SpatialError, ElevationError, PercentError, RangeError, InvalidArgumentError, \
     FloatEnum
-from enum import IntEnum, Enum
-from typing import Optional
-import datetime as dt
 
 __author__ = 'arwi'
 
@@ -575,9 +578,9 @@ class SnowProfile(Observation):
             }
 
     def __init__(self,
-                 layers: [Layer] = (),
-                 temperatures: [SnowTemp] = (),
-                 densities: [Density] = (),
+                 layers: List[Layer] = (),
+                 temperatures: List[SnowTemp] = (),
+                 densities: List[Density] = (),
                  is_profile_to_ground: Optional[bool] = None,
                  comment: Optional[str] = None):
         if all(e is None for e in [layers, temperatures, densities, comment]):
@@ -827,7 +830,7 @@ class Elevation:
 
 
 class Expositions:
-    def __init__(self, expositions: [Direction]):
+    def __init__(self, expositions: List[Direction]):
         self.exp = "00000000"
         for exposition in expositions:
             self.exp = self.exp[:exposition] + "1" + self.exp[exposition + 1:]
