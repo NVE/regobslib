@@ -1,13 +1,15 @@
-# -*- coding: utf-8 -*-
 """Network code interfacing with Regobs v5
 """
 
+# To enable postponed evaluation of annotations (default for 3.10)
 from __future__ import annotations
-from .misc import TZ, ApiError, NotAuthenticatedError, NoObservationError
-from .submit import SnowRegistration
 from enum import IntEnum
-import requests
 import datetime as dt
+
+import requests
+
+from .submit import SnowRegistration
+from .misc import TZ, ApiError, NotAuthenticatedError, NoObservationError
 
 __author__ = 'arwi'
 
