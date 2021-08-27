@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Classes representing the submission forms in Regobs v5
 """
 
