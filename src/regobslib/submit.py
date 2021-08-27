@@ -3,7 +3,6 @@
 
 # To enable postponed evaluation of annotations (default for 3.10)
 from __future__ import annotations
-
 from enum import IntEnum, Enum
 from typing import Optional, List
 import datetime as dt
