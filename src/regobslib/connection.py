@@ -75,7 +75,8 @@ class Connection:
             raise NotAuthenticatedError("Connection not authenticated.")
 
         if self.expires < TZ.localize(dt.datetime.now()) + dt.timedelta(seconds=60):
-            return self.authenticate(self.username, self.password, self.client_id, self.token).submit(registration)
+            return self.authenticate(self.username, self.password, self.client_id, self.token, self.prod).submit(
+                registration)
 
         if not registration.any_obs:
             raise NoObservationError("No observation in registration.")
