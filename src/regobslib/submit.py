@@ -145,8 +145,10 @@ class DangerSign(Observation):
 
 class AvalancheObs(Observation):
     class Type(IntEnum):
+        LOOSE_SNOW = 10  # DRY_LOOSE or WET_LOOSE should be used if possible
         DRY_LOOSE = 12
         WET_LOOSE = 11
+        SLAB = 20  # DRY_SLAB or WET_SLAB should be used if possible
         DRY_SLAB = 22
         WET_SLAB = 21
         GLIDE = 27
