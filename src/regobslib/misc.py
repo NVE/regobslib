@@ -32,41 +32,21 @@ class FloatEnum(float, Enum):
         return cls.__format__(val, format_spec)
 
 
-class Error(Exception):
+class RegobsError(Exception):
     pass
 
 
-class NotAuthenticatedError(Error):
+class NotAuthenticatedError(RegobsError):
     pass
 
 
-class NoObservationError(Error):
+class NoObservationError(RegobsError):
     pass
 
 
-class AuthError(Error):
+class AuthError(RegobsError):
     pass
 
 
-class ApiError(Error):
-    pass
-
-
-class SpatialError(Error):
-    pass
-
-
-class ElevationError(Error):
-    pass
-
-
-class PercentError(Error):
-    pass
-
-
-class RangeError(Error):
-    pass
-
-
-class InvalidArgumentError(Error):
+class ApiError(RegobsError):
     pass

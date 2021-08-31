@@ -3,8 +3,7 @@
 """
 
 from __future__ import annotations
-from .misc import TZ, NoObservationError, SpatialError, ElevationError, PercentError, RangeError, InvalidArgumentError, \
-    FloatEnum
+from .misc import TZ, NoObservationError, FloatEnum
 from enum import IntEnum, Enum
 from typing import Optional
 import datetime as dt
@@ -292,7 +291,7 @@ class Weather(Observation):
         if all(e is None for e in [precipitation, air_temp, wind_speed, cloud_cover_percent, wind_dir, comment]):
             raise NoObservationError("No argument passed to weather observation.")
         if cloud_cover_percent is not None and not (0 <= cloud_cover_percent <= 100):
-            raise PercentError("Percentage must be within the range 0--100.")
+            raise ValueError("Percentage must be within the range 0--100.")
 
         obs = {
             'AirTemperature': air_temp,
@@ -398,13 +397,13 @@ class CompressionTest(Observation):
 
         if number_of_taps is not None:
             if not (0 < number_of_taps <= 30):
-                raise RangeError("Test taps must be in the range 1-30.")
+                raise ValueError("Test taps must be in the range 1-30.")
             if test_result in [self.TestResult.ECTPV, self.TestResult.ECTX, self.TestResult.LBT, self.TestResult.CTV,
                                self.TestResult.CTN]:
-                raise InvalidArgumentError("Supplied test result must not have any number of taps.")
+                raise ValueError("Supplied test result must not have any number of taps.")
 
         if fracture_depth_cm is not None and test_result in [self.TestResult.ECTX, self.TestResult.CTN]:
-            raise InvalidArgumentError("Supplied test result must not have any fracture depth.")
+            raise ValueError("Supplied test result must not have any fracture depth.")
 
         obs = {
             'PropagationTID': test_result,
@@ -536,7 +535,7 @@ class SnowProfile(Observation):
                      critical_layer: Optional[SnowProfile.CriticalLayer] = None,
                      comment: Optional[str] = None):
             if thickness_cm < 0:
-                raise RangeError("Thickness must be larger than or equal to 0.")
+                raise ValueError("Thickness must be larger than or equal to 0.")
 
             self.layer = {
                 'Thickness': thickness_cm / 100,
@@ -556,7 +555,7 @@ class SnowProfile(Observation):
                      depth_cm: float,
                      temp_c: float):
             if temp_c > 0:
-                raise RangeError("Snow temperature must be lower than or equal to 0.")
+                raise ValueError("Snow temperature must be lower than or equal to 0.")
 
             self.temp = {
                 'Depth': depth_cm / 100,
@@ -568,7 +567,7 @@ class SnowProfile(Observation):
                      thickness_cm: float,
                      density_kg_per_cubic_metre: float):
             if thickness_cm < 0:
-                raise RangeError("Thickness must be larger than or equal to 0.")
+                raise ValueError("Thickness must be larger than or equal to 0.")
 
             self.density = {
                 'Thickness': thickness_cm / 100,
@@ -790,7 +789,7 @@ class WeakLayer(IntEnum):
 class Position:
     def __init__(self, lat: float, lon: float):
         if not (-90 <= lat <= 90) or not (-180 <= lon <= 180):
-            raise SpatialError("Latitude must be in the range -90--90, longitude -180--180.")
+            raise ValueError("Latitude must be in the range -90--90, longitude -180--180.")
 
         self.lat = lat
         self.lon = lon
@@ -806,11 +805,11 @@ class Elevation:
     def __init__(self, elev_fmt: Format, elev: int,
                  elev_secondary: Optional[int] = None):
         if not (0 <= elev <= 2500) or (elev_secondary is not None and not (0 <= elev_secondary <= 2500)):
-            raise ElevationError("Elevations must be in the range 0--2500 m.a.s.l.")
+            raise ValueError("Elevations must be in the range 0--2500 m.a.s.l.")
         if (elev_fmt == self.Format.ABOVE or elev_fmt == self.Format.BELOW) and elev_secondary is not None:
-            raise ElevationError("ABOVE and BELOW elevation formats does not use parameter elev_secondary.")
+            raise ValueError("ABOVE and BELOW elevation formats does not use parameter elev_secondary.")
         elif (elev_fmt == self.Format.SANDWICH or elev_fmt == self.Format.MIDDLE) and elev_secondary is None:
-            raise ElevationError("SANDWICH and MIDDLE elevation formats must use parameter elev_secondary.")
+            raise ValueError("SANDWICH and MIDDLE elevation formats must use parameter elev_secondary.")
 
         if elev_secondary is not None:
             elev_max = round(round(max(elev, elev), -2))
