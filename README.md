@@ -6,8 +6,8 @@ This client library aim to simplify interaction with the Regobs API v5.
 
 ## Prerequisites
 
-* An API token for the test or prod environment, contact [awa@nve.no](mailto:awa@nve.no) to acquire this.
-* A client ID for the test or prod environment, contact [awa@nve.no](mailto:awa@nve.no) to acquire this.
+* An API token for the test or prod environment, contact [regobs@nve.no](mailto:regobs@nve.no) to acquire this.
+* A client ID for the test or prod environment, contact [regobs@nve.no](mailto:regobs@nve.no) to acquire this.
 * A user account for the test or prod environment. Register here:
   * Test environment: [https://test-konto.nve.no/](https://test-konto.nve.no/)
   * Prod environment: [https://konto.nve.no/](https://konto.nve.no/)
@@ -22,7 +22,7 @@ To install using `pip`:
 ```
 pip install regobslib
 ```
- 
+
 ## Example programs
 
 Below is a simple program demonstrating how to register a whumpf sound
@@ -40,7 +40,7 @@ TOKEN = "00000000-0000-0000-0000-000000000000"
 CLIENT_ID = "00000000-0000-0000-0000-000000000000"
 
 # Create a user at https://test-konto.nve.no/ or https://konto.nve.no/
-USERNAME = "john.smith@example.com"
+USERNAME = "ola.nordmann@example.com"
 PASSWORD = "P4ssw0rd"
 
 # First we create an empty SnowRegistration object
