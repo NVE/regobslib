@@ -33,10 +33,10 @@ from regobslib import *
 import datetime as dt
 import pprint
 
-# Contact awa@nve.no to get an API token.
+# Contact regobs@nve.no to get an API token.
 TOKEN = "00000000-0000-0000-0000-000000000000"
 
-# Contact awa@nve.no to get a client ID.
+# Contact regobs@nve.no to get a client ID.
 CLIENT_ID = "00000000-0000-0000-0000-000000000000"
 
 # Create a user at https://test-konto.nve.no/ or https://konto.nve.no/
