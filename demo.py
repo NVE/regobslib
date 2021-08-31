@@ -76,7 +76,7 @@ reg.add_compression_test(CompressionTest(CompressionTest.TestResult.ECTN,
                                          fracture_depth_cm=55.54,
                                          is_in_profile=False))
 
-reg.set_snow_profile(SnowProfile((
+reg.set_snow_profile(SnowProfile([
     SnowProfile.Layer(15,
                       SnowProfile.Hardness.ONE_FINGER,
                       SnowProfile.GrainForm.PP,
@@ -94,9 +94,9 @@ reg.set_snow_profile(SnowProfile((
     SnowProfile.Layer(2,
                       SnowProfile.Hardness.ICE,
                       SnowProfile.GrainForm.MF_CR)
-),
-    (SnowProfile.SnowTemp(10, -4),),
-    (SnowProfile.Density(50, 300),),
+],
+    [SnowProfile.SnowTemp(10, -4)],
+    [SnowProfile.Density(50, 300)],
     False,
     "SH above MFcr. Very PWL. Much dangerous."
 ))
