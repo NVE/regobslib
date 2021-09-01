@@ -24,7 +24,7 @@ class Connection:
         NORWEGIAN = 1
         ENGLISH = 2
 
-    def __init__(self):
+    def __init__(self, prod: bool):
         self.expires = None
         self.session = None
         self.guid = None
@@ -33,14 +33,13 @@ class Connection:
         self.client_id = None
         self.token = None
         self.authenticated = False
-        self.prod = False
+        self.prod = prod
 
-    def authenticate(self, username: str, password: str, client_id: str, token: str, prod: bool) -> Connection:
+    def authenticate(self, username: str, password: str, client_id: str, token: str) -> Connection:
         self.username = username
         self.password = password
         self.client_id = client_id
         self.token = token
-        self.prod = prod
 
         headers = {"regObs_apptoken": self.token}
         self.session = requests.Session()
