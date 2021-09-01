@@ -51,7 +51,7 @@ reg = SnowRegistration(REGOBS_TZ.localize(dt.datetime(2021, 8, 17, 9, 48)),
 reg.add_danger_sign(DangerSign(DangerSign.Sign.WHUMPF_SOUND))
 
 # Authenticate to Regobs to be able to submit observations
-connection = Connection().authenticate(USERNAME, PASSWORD, CLIENT_ID, TOKEN, prod=False)
+connection = Connection(prod=False).authenticate(USERNAME, PASSWORD, CLIENT_ID, TOKEN)
 
 # Send our SnowRegistration to Regobs
 stored_reg = connection.submit(reg, Connection.Language.ENGLISH)

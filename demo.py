@@ -129,6 +129,6 @@ reg.set_incident(Incident(Incident.Activity.CLIMBING,
 reg.set_note(Note("Demo registration via Python client API."
                   ).add_url(Url("https://varsom.no", "Varsom")))
 
-connection = Connection().authenticate(USERNAME, PASSWORD, CLIENT_ID, TOKEN, prod=False)
+connection = Connection(prod=False).authenticate(USERNAME, PASSWORD, CLIENT_ID, TOKEN)
 stored_reg = connection.submit(reg, Connection.Language.ENGLISH)
 pprint.pprint(stored_reg)
