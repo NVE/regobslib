@@ -32,6 +32,13 @@ class SnowRegistration:
                  position: Position,
                  spatial_precision: Optional[SnowRegistration.SpatialPrecision] = None,
                  source: Optional[SnowRegistration.Source] = None):
+        """A registration corresponding to the ones made using the Snow Registration form in the web app.
+
+        @param obs_time: A localized datetime, denoting the observation time. Use REGOBS_TZ.localize() to localize.
+        @param position: The position of the observation. Use WGS84 coordinates.
+        @param spatial_precision: The margin of error of the observation position, in meters.
+        @param source: What kind of source the knowledge this registration is based upon is based on.
+        """
         self.any_obs = False
         self.reg = {
             'AttachmentSummaries': [],
@@ -58,56 +65,111 @@ class SnowRegistration:
         }
 
     def add_danger_sign(self, danger_sign: DangerSign) -> SnowRegistration:
+        """Add a DongerSign. Previously added DongerSigns will still be in the registration.
+
+        @param danger_sign: The DangerSign to add.
+        @return: self, with an added danger sign.
+        """
         self.any_obs = True
         self.reg['DangerObs'].append(danger_sign.obs)
         return self
 
     def set_avalanche_obs(self, avalanche_obs: AvalancheObs) -> SnowRegistration:
+        """Set an AvalancheObs. Previously set AvalancheObs will be overwritten.
+
+        @param avalanche_obs: The AvalancheObs to set.
+        @return: self, with the provided AvalancheObs set.
+        """
         self.any_obs = True
         self.reg['AvalancheObs'] = avalanche_obs.obs
         return self
 
     def add_avalanche_activity(self, avalanche_activity: AvalancheActivity) -> SnowRegistration:
+        """Add an AvalancheActivity. Any previously added AvalancheActivity will still be in the registration.
+
+        @param avalanche_activity: The AvalancheActivity to add.
+        @return: self, with an added AvalancheActivity.
+        """
         self.any_obs = True
         self.reg['AvalancheActivityObs2'].append(avalanche_activity.obs)
         return self
 
     def set_weather(self, weather: Weather) -> SnowRegistration:
+        """Set a Weather. Previously set Weather will be overwritten.
+
+        @param weather: The Weather to set.
+        @return: self, with the provided Weather set.
+        """
         self.any_obs = True
         self.reg["WeatherObservation"] = weather.obs
         return self
 
     def set_snow_cover(self, snow_cover: SnowCover) -> SnowRegistration:
+        """Set a SnowCover. Previosly set SnowCover will be overwritten.
+
+        @param snow_cover: The SnowCover to set.
+        @return: self, with the provided SnowCover set.
+        """
         self.any_obs = True
         self.reg["SnowSurfaceObservation"] = snow_cover.obs
         return self
 
-    def add_compression_test(self, compression_test: CompressionTest):
+    def add_compression_test(self, compression_test: CompressionTest) -> SnowRegistration:
+        """Add a CompressionTest. Any previously added CompressionTest will still be in the registration.
+
+        @param compression_test: The CompressionTest to add.
+        @return: self, with an added CompressionTest.
+        """
         self.any_obs = True
         self.reg["CompressionTest"].append(compression_test.obs)
         return self
 
-    def set_snow_profile(self, snow_profile: SnowProfile):
+    def set_snow_profile(self, snow_profile: SnowProfile) -> SnowRegistration:
+        """Set a SnowProfile. Previously set SnowProfile will be overwritten.
+
+        @param snow_profile: The SnowProfile to set.
+        @return: self, with the provided SnowProfile set.
+        """
         self.any_obs = True
         self.reg["SnowProfile2"] = snow_profile.obs
         return self
 
-    def add_avalanche_problem(self, avalanche_problem: AvalancheProblem):
+    def add_avalanche_problem(self, avalanche_problem: AvalancheProblem) -> SnowRegistration:
+        """Add an AvalancheProblem. Any previously added AvalancheProblem will still be in the registration.
+
+        @param avalanche_problem: The AvalancheProblem to add.
+        @return: self, with an added AvalancheProblem.
+        """
         self.any_obs = True
         self.reg["AvalancheEvalProblem2"].append(avalanche_problem.obs)
         return self
 
-    def set_danger_assessment(self, danger_assessment: DangerAssessment):
+    def set_danger_assessment(self, danger_assessment: DangerAssessment) -> SnowRegistration:
+        """Set a DangerAssessment. Previously set DangerAssessment will be overwritten.
+
+        @param danger_assessment: The DangerAssessment to set.
+        @return: self, with the provided DangerAssessment set.
+        """
         self.any_obs = True
         self.reg["AvalancheEvaluation3"] = danger_assessment.obs
         return self
 
     def set_incident(self, incident: Incident) -> SnowRegistration:
+        """Set an Incident. Previously set Incident will be overwritten.
+
+        @param incident: The Incident to set.
+        @return: self, with the provided Incident set.
+        """
         self.any_obs = True
         self.reg['Incident'] = incident.obs
         return self
 
     def set_note(self, note: Note) -> SnowRegistration:
+        """Set a Note. Previously set Note will be overwritten.
+
+        @param note: The Note to set.
+        @return: self, with the Note set.
+        """
         self.any_obs = True
         self.reg['GeneralObservation'] = note.obs
         return self
@@ -115,6 +177,7 @@ class SnowRegistration:
 
 class Observation:
     def __init__(self, obs):
+        """Interface for Observations in SnowRegistrations."""
         self.obs = {k: v for k, v in obs.items() if v is not None}
 
 
@@ -133,6 +196,11 @@ class DangerSign(Observation):
     def __init__(self,
                  sign: Optional[DangerSign.Sign] = None,
                  comment: Optional[str] = None):
+        """A danger sign, such as whumpf sounds or quick temperature change.
+
+        @param sign: What kind of danger sign was observed?
+        @param comment: Comment regarding the danger sign.
+        """
         if all(e is None for e in [sign, comment]):
             raise NoObservationError("No argument passed to danger sign observation.")
 
@@ -191,6 +259,22 @@ class AvalancheObs(Observation):
                  path_name: Optional[str] = None,
                  comment: Optional[str] = None,
                  ):
+        """An observation of a single avalanche. This should be used if you have detailed info regarding an avalanche.
+
+        @param release_time: When was the avalanche triggered?
+        @param start: Give the highest position of the fracture line.
+        @param stop: Give the lowest position of the avalanche debris.
+        @param exposition: In what direction was the avalanche triggered?
+        @param size: How large was the avalanche, on the standardized scale between 1-5?
+        @param avalanche_type: What kind of avalanche was triggered?
+        @param trigger: What triggered the avalanche?
+        @param terrain: In what kind of terrain was the avalanche triggered?
+        @param weak_layer: What kind of weak layer collapsed to give rise to the avalanche?
+        @param fracture_height_cm: How high was the fracture line (in cm)?
+        @param fracture_width: How wide was the avalanche (in metres)?
+        @param path_name: If the avalanche was observed in a known avalanche track, give its name.
+        @param comment: Comment regarding the avalanche observation.
+        """
         obs = {
             'AvalCauseTID': weak_layer,
             'AvalancheTID': avalanche_type,
@@ -244,6 +328,19 @@ class AvalancheActivity(Observation):
                  elevation: Optional[Elevation] = None,
                  expositions: Optional[Expositions] = None,
                  comment: Optional[str] = None):
+        """Av observation of a group of avalanches.
+
+        @param date: On what day were the avalanches triggered?
+        @param timeframe: When during the day were the avalanches triggered?
+        @param quantity: How many avalanches were triggered?
+        @param avalanche_type: What kind of avalanche was triggered?
+        @param sensitivity: The sensitivy to triggering of the avalanche problem.
+        @param size: How large was the avalanches, on the standardized scale between 1-5?
+        @param distribution: The distribution of the avalanche problem in the terrain.
+        @param elevation: The elevation band of the avalanches.
+        @param expositions: The expositions of the avalanches.
+        @param comment: Comment regarding the avalanche activity.
+        """
         avalanche_attributes = [quantity, avalanche_type, sensitivity, size, distribution, elevation, expositions]
         if quantity == self.Quantity.NO_ACTIVITY and any(e is not None for e in avalanche_attributes):
             raise NoObservationError("Avalanche attributes specified, but no avalanche activity reported.")
@@ -291,6 +388,15 @@ class Weather(Observation):
                  wind_speed: Optional[float] = None,
                  cloud_cover_percent: Optional[int] = None,
                  comment: Optional[str] = None):
+        """
+
+        @param precipitation: The amount and kind of precipitation.
+        @param wind_dir: The wind direction.
+        @param air_temp: Air temperature.
+        @param wind_speed: The wind speed.
+        @param cloud_cover_percent: How much of the sky (in percent) is covered by clouds?
+        @param comment: Comment regarding the weather.
+        """
         if all(e is None for e in [precipitation, air_temp, wind_speed, cloud_cover_percent, wind_dir, comment]):
             raise NoObservationError("No argument passed to weather observation.")
         if cloud_cover_percent is not None and not (0 <= cloud_cover_percent <= 100):
@@ -345,6 +451,18 @@ class SnowCover(Observation):
                  snow_line: Optional[int] = None,
                  layered_snow_line: Optional[float] = None,
                  comment: Optional[str] = None):
+        """
+
+        @param drift: Are there any drifting snow?
+        @param surface: What is on the surface of the snow cover?
+        @param moisture: What is the moisture content of the snow cover?
+        @param hn24_cm: How much snow has been accumulated over the last 24 hours (in cm)?
+        @param new_snow_line: What is the lowest elevation of new snow (in metres)?
+        @param hs_cm: How deep is the snow (in cm)?
+        @param snow_line: What is the lowest elevation of snow (in metres)?
+        @param layered_snow_line: What is the lowest elevation of layered snow (in metres)?
+        @param comment: Comment regarding the snow cover.
+        """
         if all(e is None for e in
                [drift, surface, moisture, hn24_cm, new_snow_line, hs_cm, snow_line, layered_snow_line, comment]):
             raise NoObservationError("No argument passed to snow cover observation.")
@@ -394,6 +512,16 @@ class CompressionTest(Observation):
                  fracture_depth_cm: Optional[float] = None,
                  is_in_profile: Optional[bool] = None,
                  comment: Optional[str] = None):
+        """Compression tests, such as CT and ECT.
+
+        @param test_result: The kind of test and the result of that test.
+        @param fracture_quality: The fracture quality, i.e. Q1, Q2 or Q3.
+        @param stability: The stability of the snowpack according to the test.
+        @param number_of_taps: The number of taps before collapse.
+        @param fracture_depth_cm: The depth of the fracture (in cm).
+        @param is_in_profile: Whether to include the compression test in the snow profile.
+        @param comment: Comment regarding the compression test.
+        """
         if all(e is None for e in [test_result, fracture_quality, stability, number_of_taps, fracture_depth_cm,
                                    is_in_profile, comment]):
             raise NoObservationError("No argument passed to compression test.")
@@ -537,6 +665,19 @@ class SnowProfile(Observation):
                      grain_size_max_mm: Optional[SnowProfile.GrainSize] = None,
                      critical_layer: Optional[SnowProfile.CriticalLayer] = None,
                      comment: Optional[str] = None):
+            """
+
+            @param thickness_cm: Layer thickness (in cm).
+            @param hardness: Layer hardness (F, 4F, 1F, P, K, I).
+            @param grain_form_primary: Primary grain form.
+            @param grain_size_mm: Grain size (in mm).
+            @param wetness: Moisture content of the layer.
+            @param hardness_bottom: Hardness at the bottom of the layer (F, 4F, 1F, P, K, I).
+            @param grain_form_sec: Secondary grain form.
+            @param grain_size_max_mm: Maximum grain size (in mm).
+            @param critical_layer: Is this layer critical, and what part of it?
+            @param comment: Comment regarding the snow layer.
+            """
             if thickness_cm < 0:
                 raise ValueError("Thickness must be larger than or equal to 0.")
 
@@ -557,6 +698,11 @@ class SnowProfile(Observation):
         def __init__(self,
                      depth_cm: float,
                      temp_c: float):
+            """Snow temperature at a given depth.
+
+            @param depth_cm: The depth measured (in cm from top).
+            @param temp_c: The measured temperature (in Celsius).
+            """
             if temp_c > 0:
                 raise ValueError("Snow temperature must be lower than or equal to 0.")
 
@@ -569,6 +715,11 @@ class SnowProfile(Observation):
         def __init__(self,
                      thickness_cm: float,
                      density_kg_per_cubic_metre: float):
+            """Snow density at a given depth.
+
+            @param thickness_cm: The thickness of the sample layer (in cm).
+            @param density_kg_per_cubic_metre: The density (in kg/m³).
+            """
             if thickness_cm < 0:
                 raise ValueError("Thickness must be larger than or equal to 0.")
 
@@ -583,6 +734,14 @@ class SnowProfile(Observation):
                  densities: List[Density] = (),
                  is_profile_to_ground: Optional[bool] = None,
                  comment: Optional[str] = None):
+        """A snow profile, including tests, layers, temperatures and densities.
+
+        @param layers: Snow layers included in the profile.
+        @param temperatures: Temperatures measured in the snow profile.
+        @param densities: Densities measured in the snow.
+        @param is_profile_to_ground: Whether the snow profile was dug to the ground.
+        @param comment: Comment regarding the snow profile.
+        """
         if all(e is None for e in [layers, temperatures, densities, comment]):
             raise NoObservationError("Neither layers, temperatures, densities or comment passed to snow profile.")
 
@@ -628,6 +787,22 @@ class AvalancheProblem(Observation):
                  is_soft_slab_above: Optional[bool] = None,
                  is_large_crystals: Optional[bool] = None,
                  comment: Optional[str] = None):
+        """An avalanche problem assessed to be in the terrain.
+
+        @param weak_layer: The kind of weak layer causing the avalanche problem.
+        @param layer_depth: The depth of the layer of concern.
+        @param avalanche_type: The type of avalanche that this problem could cause.
+        @param sensitivity: The problems sensitivity to triggers.
+        @param size: The size of potential avalanches caused by this problem.
+        @param distribution: The distribution in the terrain of this avalanche problem
+        @param elevation: The evelation band of the avalanche problem.
+        @param expositions: The expositions that the avalanche problem exists in.
+        @param is_easy_propagation: Whether a collaps in the layer of concern propagates easy.
+        @param is_layer_thin: Whether the layer of concern is thin.
+        @param is_soft_slab_above: Whether the layer of concern has a soft slap above it.
+        @param is_large_crystals: Whether the layer of concern consists of large crystals.
+        @param comment: Comment regarding the avalanche problem.
+        """
         if all(e is None for e in
                [weak_layer, layer_depth, avalanche_type, sensitivity, size, distribution, elevation, expositions,
                 is_easy_propagation, is_layer_thin, is_soft_slab_above, is_large_crystals, comment]):
@@ -671,6 +846,14 @@ class DangerAssessment(Observation):
                  danger_assessment: Optional[str] = None,
                  danger_development: Optional[str] = None,
                  comment: Optional[str] = None):
+        """A danger assessment based on the rest of the registration.
+
+        @param danger_level: The assessed danger level, between 1-5.
+        @param forecast_evaluation: An evaluation of the issued forecast for the given day and region.
+        @param danger_assessment: An assessment of the current danger in the area of the registration.
+        @param danger_development: An assessment of the development of the danger in the area of the registration.
+        @param comment: Comment regarding the danger assessment.
+        """
         if all(e is None for e in [danger_level, forecast_evaluation, danger_assessment, danger_development, comment]):
             raise NoObservationError("No argument passed to avalanche danger assessment.")
 
@@ -715,6 +898,12 @@ class Incident(Observation):
                  activity: Optional[Activity] = None,
                  extent: Optional[Extent] = None,
                  comment: Optional[str] = None):
+        """An avalanche incident risking health, property, the environment, or other things of value.
+
+        @param activity: In what setting did the incident occur.
+        @param extent: The extent of the damages to health, property, the environment, or other things of value.
+        @param comment: Comment regarding the avalanche incident.
+        """
         if all(e is None for e in [activity, extent, comment]):
             raise NoObservationError("No argument passed to incident observation.")
 
@@ -727,12 +916,21 @@ class Incident(Observation):
         super().__init__(obs)
 
     def add_url(self, url: Url) -> Incident:
+        """Adds an URL to the Incident.
+
+        @param url: The Url object to add to the Incident.
+        @return: self, with an added Url object.
+        """
         self.obs['IncidentURLs'].append(url.url)
         return self
 
 
 class Note(Observation):
     def __init__(self, comment: str):
+        """A general note for a registration.
+
+        @param comment: Comment regarding the registration.
+        """
         obs = {
             'ObsComment': comment,
             'Urls': [],
@@ -740,12 +938,22 @@ class Note(Observation):
         super().__init__(obs)
 
     def add_url(self, url: Url) -> Note:
+        """Adds an URL to the Note.
+
+        @param url: The Url object to add to the Note.
+        @return: self, with an added Url object.
+        """
         self.obs['Urls'].append(url.url)
         return self
 
 
 class Url:
     def __init__(self, url: str, description: str):
+        """Url object, containing an address and a description.
+
+        @param url: The web address to link to.
+        @param description: A general description of the provided URL.
+        """
         self.url = {
             'UrlDescription': description,
             'UrlLine': url,
@@ -791,6 +999,11 @@ class WeakLayer(IntEnum):
 
 class Position:
     def __init__(self, lat: float, lon: float):
+        """A position, in WGS84 (lat/long).
+
+        @param lat: The latitude of the position.
+        @param lon: The longitude of the position.
+        """
         if not (-90 <= lat <= 90) or not (-180 <= lon <= 180):
             raise ValueError("Latitude must be in the range -90--90, longitude -180--180.")
 
@@ -807,6 +1020,17 @@ class Elevation:
 
     def __init__(self, elev_fmt: Format, elev: int,
                  elev_secondary: Optional[int] = None):
+        """An elevation band specification.
+
+        - If C{elev_fmt == 1}, then the elevation band represents all elevations above C{elev}
+        - If C{elev_fmt == 2}, then the elevation band represents all elevations below C{elev}
+        - If C{elev_fmt == 3}, elevations above C{elev} as well as elevations below C{elev_secondary} are represented.
+        - If C{elev_fmt == 4}, elevations between C{elev} and C{elev_secondary} are represented.
+
+        @param elev_fmt: The format of the elevation band.
+        @param elev: The first elevation of the elevation band.
+        @param elev_secondary: The second elevation of the elevation band.
+        """
         if not (0 <= elev <= 2500) or (elev_secondary is not None and not (0 <= elev_secondary <= 2500)):
             raise ValueError("Elevations must be in the range 0--2500 m.a.s.l.")
         if (elev_fmt == self.Format.ABOVE or elev_fmt == self.Format.BELOW) and elev_secondary is not None:
@@ -831,6 +1055,10 @@ class Elevation:
 
 class Expositions:
     def __init__(self, expositions: List[Direction]):
+        """A collection of directions.
+
+        @param expositions: The directions to include into the collection.
+        """
         self.exp = "00000000"
         for exposition in expositions:
             self.exp = self.exp[:exposition] + "1" + self.exp[exposition + 1:]
