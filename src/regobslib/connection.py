@@ -25,6 +25,10 @@ class Connection:
         ENGLISH = 2
 
     def __init__(self, prod: bool):
+        """A connection to send and fetch information from Regobs
+
+        @param prod: Whether to connect to the production server (true) or the test server (false).
+        """
         self.expires = None
         self.session = None
         self.guid = None
@@ -36,6 +40,14 @@ class Connection:
         self.prod = prod
 
     def authenticate(self, username: str, password: str, client_id: str, token: str) -> Connection:
+        """Authenticate to be able to use the Connection to submit registrations.
+
+        @param username: NVE Account username (make sure to use the relevant kind of NVE Account (prod/test)).
+        @param password: NVE Account password.
+        @param client_id: NVE Account client ID.
+        @param token: Regobs API token. This will be deprecated and made optional in the near future.
+        @return: self, authenticated.
+        """
         self.username = username
         self.password = password
         self.client_id = client_id
@@ -70,6 +82,12 @@ class Connection:
         return self
 
     def submit(self, registration: SnowRegistration, language: Language = 1) -> dict:
+        """Submit a SnowRegistration to Regobs.
+
+        @param registration: A prepared SnowRegistation.
+        @param language: The interface language of the returned json. This may be irrelevant in the future.
+        @return: A dictionary corresponding to the submitted registration. This is subject to change.
+        """
         if not self.authenticated:
             raise NotAuthenticatedError("Connection not authenticated.")
 
