@@ -388,7 +388,7 @@ class Weather(Observation):
                  wind_speed: Optional[float] = None,
                  cloud_cover_percent: Optional[int] = None,
                  comment: Optional[str] = None):
-        """
+        """Information regarding the weather.
 
         @param precipitation: The amount and kind of precipitation.
         @param wind_dir: The wind direction.
@@ -451,7 +451,7 @@ class SnowCover(Observation):
                  snow_line: Optional[int] = None,
                  layered_snow_line: Optional[float] = None,
                  comment: Optional[str] = None):
-        """
+        """Information regarding the top of the snowpack.
 
         @param drift: Are there any drifting snow?
         @param surface: What is on the surface of the snow cover?
@@ -665,7 +665,7 @@ class SnowProfile(Observation):
                      grain_size_max_mm: Optional[SnowProfile.GrainSize] = None,
                      critical_layer: Optional[SnowProfile.CriticalLayer] = None,
                      comment: Optional[str] = None):
-            """
+            """A snow layer of a snow profile.
 
             @param thickness_cm: Layer thickness (in cm).
             @param hardness: Layer hardness (F, 4F, 1F, P, K, I).
