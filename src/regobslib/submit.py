@@ -6,6 +6,8 @@ from __future__ import annotations
 from enum import IntEnum, Enum
 from typing import Optional, List
 import datetime as dt
+import mimetypes
+import re
 
 from .misc import TZ, NoObservationError, FloatEnum
 
@@ -13,6 +15,8 @@ __author__ = 'arwi'
 
 
 class SnowRegistration:
+    GEO_HAZARD = 10
+
     class Source(IntEnum):
         SEEN = 10
         TOLD = 20
@@ -26,6 +30,19 @@ class SnowRegistration:
         FIVE_HUNDRED = 500
         ONE_KM = 1000
         OVER_KM = -1
+
+    class ObservationType(IntEnum):
+        NOTE = 10
+        INCIDENT = 11
+        DANGER_SIGN = 13
+        WEATHER = 21
+        SNOW_COVER = 22
+        COMPRESSION_TEST = 25
+        AVALANCHE_OBS = 26
+        DANGER_ASSESSMENT = 31
+        AVALANCHE_PROBLEM = 32
+        AVALANCHE_ACTIVITY = 33
+        SNOW_PROFILE = 36
 
     def __init__(self,
                  obs_time: dt.datetime,
@@ -62,6 +79,19 @@ class SnowRegistration:
             'SnowProfile2': None,
             'SnowSurfaceObservation': None,
             'WeatherObservation': None,
+        }
+        self.images = {
+            SnowRegistration.ObservationType.NOTE: [],
+            SnowRegistration.ObservationType.INCIDENT: [],
+            SnowRegistration.ObservationType.DANGER_SIGN: [],
+            SnowRegistration.ObservationType.WEATHER: [],
+            SnowRegistration.ObservationType.SNOW_COVER: [],
+            SnowRegistration.ObservationType.COMPRESSION_TEST: [],
+            SnowRegistration.ObservationType.AVALANCHE_OBS: [],
+            SnowRegistration.ObservationType.DANGER_ASSESSMENT: [],
+            SnowRegistration.ObservationType.AVALANCHE_PROBLEM: [],
+            SnowRegistration.ObservationType.AVALANCHE_ACTIVITY: [],
+            SnowRegistration.ObservationType.SNOW_PROFILE: [],
         }
 
     def add_danger_sign(self, danger_sign: DangerSign) -> SnowRegistration:
@@ -172,6 +202,21 @@ class SnowRegistration:
         """
         self.any_obs = True
         self.reg['GeneralObservation'] = note.obs
+        return self
+
+    def add_image(self,
+                  image: Image,
+                  parent_registration_type: SnowRegistration.ObservationType
+                  ) -> SnowRegistration:
+        """Add an image to the danger sign schema
+
+        @param image: The Image to add.
+        @param parent_registration_type: The schema under which to add the image.
+        @return: self, with an added image.
+        """
+        image.img["GeoHazardTID"] = SnowRegistration.GEO_HAZARD
+        image.img["RegistrationTID"] = parent_registration_type
+        self.images[parent_registration_type].append(image)
         return self
 
 
@@ -945,6 +990,35 @@ class Note(Observation):
         """
         self.obs['Urls'].append(url.url)
         return self
+
+
+class Image:
+    def __init__(self,
+                 file_path: str,
+                 direction: Optional[Direction] = None,
+                 photographer: Optional[str] = None,
+                 copyright_holder: Optional[str] = None,
+                 comment: Optional[str] = None):
+        """Add an image to the danger sign schema
+
+        @param file_path: Path to image file to add.
+        @param direction: The aspect of the image.
+        @param photographer: Name of the photographer.
+        @param copyright_holder: Name of person or organisation holding the copyright to the image.
+        @param comment: Comment regarding the avalanche observation.
+        """
+        mime, _ = mimetypes.guess_type(file_path, False)
+        if mime is None or not re.match(r"^image", mime):
+            raise ValueError("Could not recognize file name as an image.")
+
+        self.path = file_path
+        self.img = {
+            "Aspect": direction * 45 if direction is not None else None,
+            "AttachmentMimeType": mime,
+            "Photographer": photographer,
+            "Copyright": copyright_holder,
+            "Comment": comment,
+        }
 
 
 class Url:
