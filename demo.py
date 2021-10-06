@@ -14,7 +14,7 @@ USERNAME = "ola.nordmann@example.com"
 PASSWORD = "P4ssw0rd"
 
 
-reg = SnowRegistration(REGOBS_TZ.localize(dt.datetime(2021, 8, 23, 9, 48)),
+reg = SnowRegistration(REGOBS_TZ.localize(dt.datetime(2021, 10, 6, 10, 15)),
                        Position(lat=68.4293, lon=18.2572),
                        SnowRegistration.SpatialPrecision.ONE_HUNDRED,
                        SnowRegistration.Source.SEEN)
@@ -22,6 +22,13 @@ reg = SnowRegistration(REGOBS_TZ.localize(dt.datetime(2021, 8, 23, 9, 48)),
 reg.add_danger_sign(DangerSign(DangerSign.Sign.WHUMPF_SOUND))
 reg.add_danger_sign(DangerSign(DangerSign.Sign.QUICK_TEMP_CHANGE, "Very quick!"))
 reg.add_danger_sign(DangerSign(comment="It just felt dangerous."))
+
+reg.add_image(Image("img/apollo.jpg",
+                    Direction.NE,
+                    photographer="Apollo",
+                    copyright_holder="NASA",
+                    comment="There's no snow on the moon."),
+              SnowRegistration.ObservationType.DANGER_SIGN)
 
 reg.set_avalanche_obs(AvalancheObs(REGOBS_TZ.localize(dt.datetime(2021, 3, 21, 16, 5)),
                                    Position(lat=61.1955, lon=10.3711),

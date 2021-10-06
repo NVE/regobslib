@@ -3,6 +3,7 @@
 
 # To enable postponed evaluation of annotations (default for 3.10)
 from __future__ import annotations
+
 from enum import IntEnum
 import datetime as dt
 
@@ -97,6 +98,16 @@ class Connection:
 
         if not registration.any_obs:
             raise NoObservationError("No observation in registration.")
+
+        for registration_type, images in registration.images.items():
+            for image in images:
+                with open(image.path, "rb") as file:
+                    body = {"file": (image.path, file, image.img["AttachmentMimeType"])}
+                    img_id = self.session.post(f"{API_PROD if self.prod else API_TEST}/Attachment/Upload", files=body)
+                    if img_id.status_code != 200:
+                        raise ApiError(img_id.content)
+                    image.img["AttachmentUploadId"] = img_id.json()
+                    registration.reg["Attachments"].append(image.img)
 
         reg_filtered = {k: v for k, v in registration.reg.items() if v}
         reg_id = self.session.post(f"{API_PROD if self.prod else API_TEST}/Registration", json=reg_filtered)
