@@ -25,16 +25,34 @@ pip install regobslib
 
 ## Example programs
 
+### Searching for data
+
+Here is an example program searching for weather observations in Ofoten.
+
+```python
+from regobslib import *
+
+connection = Connection(prod=True)
+results = connection.search(SnowRegistration, regions=[SnowRegion.OFOTEN], observation_types=[Weather])
+
+print(f"Length of results: {len(results)}\n")
+
+print("First result")
+print(results[0])
+
+print("\nIterates over results")
+for result in results:
+    print(f"Id: {result.id}, Observer: {result.observer.nickname}, Date: {result.obs_time}")
+```
+
+### Submitting data
+
 Below is a simple program demonstrating how to register a whumpf sound
 at a given location and time.
 
 ```python
 from regobslib import *
 import datetime as dt
-import pprint
-
-# Contact regobs@nve.no to get an API token.
-TOKEN = "00000000-0000-0000-0000-000000000000"
 
 # Contact regobs@nve.no to get a client ID.
 CLIENT_ID = "00000000-0000-0000-0000-000000000000"
@@ -51,11 +69,11 @@ reg = SnowRegistration(REGOBS_TZ.localize(dt.datetime(2021, 8, 17, 9, 48)),
 reg.add_danger_sign(DangerSign(DangerSign.Sign.WHUMPF_SOUND))
 
 # Authenticate to Regobs to be able to submit observations
-connection = Connection(prod=False).authenticate(USERNAME, PASSWORD, CLIENT_ID, TOKEN)
+connection = Connection(prod=False).authenticate(USERNAME, PASSWORD, CLIENT_ID)
 
 # Send our SnowRegistration to Regobs
-stored_reg = connection.submit(reg, Connection.Language.ENGLISH)
-pprint.pprint(stored_reg)
+stored_reg = connection.submit(reg)
+print(stored_reg)
 ```
 
 For a more extensive demonstration, refer to [demo.py](https://github.com/NVE/regobslib/blob/master/demo.py).
