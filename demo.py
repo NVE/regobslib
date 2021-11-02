@@ -1,10 +1,6 @@
 from regobslib import *
 import datetime as dt
-import pprint
 
-
-# Contact regobs@nve.no to get an API token.
-TOKEN = "00000000-0000-0000-0000-000000000000"
 
 # Contact regobs@nve.no to get a client ID.
 CLIENT_ID = "00000000-0000-0000-0000-000000000000"
@@ -23,12 +19,12 @@ reg.add_danger_sign(DangerSign(DangerSign.Sign.WHUMPF_SOUND))
 reg.add_danger_sign(DangerSign(DangerSign.Sign.QUICK_TEMP_CHANGE, "Very quick!"))
 reg.add_danger_sign(DangerSign(comment="It just felt dangerous."))
 
-reg.add_image(Image("img/apollo.jpg",
+reg.add_image(LocalImage("img/apollo.jpg",
                     Direction.NE,
                     photographer="Apollo",
                     copyright_holder="NASA",
                     comment="There's no snow on the moon."),
-              SnowRegistration.ObservationType.DANGER_SIGN)
+              DangerSign)
 
 reg.set_avalanche_obs(AvalancheObs(REGOBS_TZ.localize(dt.datetime(2021, 3, 21, 16, 5)),
                                    Position(lat=61.1955, lon=10.3711),
@@ -83,30 +79,28 @@ reg.add_compression_test(CompressionTest(CompressionTest.TestResult.ECTN,
                                          fracture_depth_cm=55.54,
                                          is_in_profile=False))
 
-reg.set_snow_profile(SnowProfile([
-    SnowProfile.Layer(15,
-                      SnowProfile.Hardness.ONE_FINGER,
-                      SnowProfile.GrainForm.PP,
-                      SnowProfile.GrainSize.TWO,
-                      SnowProfile.Wetness.D,
-                      SnowProfile.Hardness.FOUR_FINGERS,
-                      SnowProfile.GrainForm.DF,
-                      SnowProfile.GrainSize.ONE),
-    SnowProfile.Layer(0.5,
-                      SnowProfile.Hardness.FIST,
-                      SnowProfile.GrainForm.SH,
-                      SnowProfile.GrainSize.FIVE,
-                      critical_layer=SnowProfile.CriticalLayer.WHOLE,
-                      comment="This is what I'm worried about"),
-    SnowProfile.Layer(2,
-                      SnowProfile.Hardness.ICE,
-                      SnowProfile.GrainForm.MF_CR)
-],
-    [SnowProfile.SnowTemp(10, -4)],
-    [SnowProfile.Density(50, 300)],
-    False,
-    "SH above MFcr. Very PWL. Much dangerous."
-))
+reg.set_snow_profile(SnowProfile(layers=[SnowProfile.Layer(15,
+                                                           SnowProfile.Hardness.ONE_FINGER,
+                                                           SnowProfile.GrainForm.PP,
+                                                           SnowProfile.GrainSize.TWO,
+                                                           SnowProfile.Wetness.D,
+                                                           SnowProfile.Hardness.FOUR_FINGERS,
+                                                           SnowProfile.GrainForm.DF,
+                                                           SnowProfile.GrainSize.ONE),
+                                         SnowProfile.Layer(0.5,
+                                                           SnowProfile.Hardness.FIST,
+                                                           SnowProfile.GrainForm.SH,
+                                                           SnowProfile.GrainSize.FIVE,
+                                                           critical_layer=SnowProfile.CriticalLayer.WHOLE,
+                                                           comment="This is what I'm worried about"),
+                                         SnowProfile.Layer(2,
+                                                           SnowProfile.Hardness.ICE,
+                                                           SnowProfile.GrainForm.MF_CR)
+                                        ],
+                                 temperatures=[SnowProfile.SnowTemp(10, -4)],
+                                 densities=[SnowProfile.Density(50, 300)],
+                                 is_profile_to_ground=False,
+                                 comment="SH above MFcr. Very PWL. Much dangerous."))
 
 reg.add_avalanche_problem(AvalancheProblem(WeakLayer.FC_ABOVE_MFCR,
                                            AvalancheProblem.LayerDepth.LESS_THAN_50_CM,
@@ -136,6 +130,6 @@ reg.set_incident(Incident(Incident.Activity.CLIMBING,
 reg.set_note(Note("Demo registration via Python client API."
                   ).add_url(Url("https://varsom.no", "Varsom")))
 
-connection = Connection(prod=False).authenticate(USERNAME, PASSWORD, CLIENT_ID, TOKEN)
-stored_reg = connection.submit(reg, Connection.Language.ENGLISH)
-pprint.pprint(stored_reg)
+connection = Connection(prod=False).authenticate(USERNAME, PASSWORD, CLIENT_ID)
+stored_reg = connection.submit(reg)
+print(stored_reg)
