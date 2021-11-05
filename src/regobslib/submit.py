@@ -300,16 +300,21 @@ class SnowRegistration(Registration):
         return self
 
     def add_image(self,
-                  image: LocalImage,
-                  parent_observation_type: Type[SnowObservation]
+                  image: Image,
+                  parent_registration_type: Type[SnowObservation],
                   ) -> SnowRegistration:
         """Add an image to the danger sign schema
 
         @param image: The Image to add.
-        @param parent_observation_type: The schema under which to add the image.
+        @param parent_registration_type: The schema under which to add the image.
         @return: self, with an added image.
         """
-        self.images[parent_observation_type.OBSERVATION_TYPE].append(image)
+        if isinstance(parent_registration_type, object) and hasattr(parent_registration_type, "OBSERVATION_TYPE"):
+            self.images[parent_registration_type.OBSERVATION_TYPE].append(image)
+        elif isinstance(parent_registration_type, int):
+            self.images[parent_registration_type].append(image)
+        else:
+            raise ValueError("Invalid type for parent_registration_type.")
         return self
 
     def to_dict(self) -> ObsDict:
@@ -404,7 +409,7 @@ class SnowRegistration(Registration):
         reg.images = {}
         if "Attachments" in json and json["Attachments"] is not None:
             for image in json["Attachments"]:
-                obs_type = cls._convert(image, "GeoHazardTID", cls.ObservationType)
+                obs_type = cls._convert(image, "RegistrationTID", cls.ObservationType)
                 if obs_type not in reg.images:
                     reg.images[obs_type] = []
                 reg.images[obs_type].append(UploadedImage.deserialize(image))
@@ -1666,7 +1671,7 @@ class Note(SnowObservation):
         return note
 
 
-class Image:
+class ImageInterface:
     mime = None
     direction = None
     photographer = None
@@ -1674,7 +1679,7 @@ class Image:
     comment = None
 
 
-class LocalImage(Image, Serializable, Dictable):
+class Image(ImageInterface, Serializable, Dictable):
     def __init__(self,
                  file_path: str,
                  direction: Optional[Direction] = None,
@@ -1722,7 +1727,13 @@ class LocalImage(Image, Serializable, Dictable):
         })
 
 
-class UploadedImage(Image, Deserializable, Dictable):
+# This class was created and published as a mistake.
+# Just let it be.
+class LocalImage(Image):
+    pass
+
+
+class UploadedImage(ImageInterface, Deserializable, Dictable):
     id = None
     url = None
 

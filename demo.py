@@ -19,7 +19,7 @@ reg.add_danger_sign(DangerSign(DangerSign.Sign.WHUMPF_SOUND))
 reg.add_danger_sign(DangerSign(DangerSign.Sign.QUICK_TEMP_CHANGE, "Very quick!"))
 reg.add_danger_sign(DangerSign(comment="It just felt dangerous."))
 
-reg.add_image(LocalImage("img/apollo.jpg",
+reg.add_image(Image("img/apollo.jpg",
                     Direction.NE,
                     photographer="Apollo",
                     copyright_holder="NASA",

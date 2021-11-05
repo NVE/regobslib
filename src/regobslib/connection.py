@@ -81,7 +81,7 @@ class Connection:
         NORWEGIAN = 1
         ENGLISH = 2
 
-    language = 1
+    language = Language.NORWEGIAN
 
     def __init__(self, prod: bool):
         """A connection to send and fetch information from Regobs
@@ -142,7 +142,7 @@ class Connection:
         self.authenticated = True
         return self
 
-    def submit(self, registration: SnowRegistration) -> Registration:
+    def submit(self, registration: SnowRegistration, language: Language = None) -> Registration:
         """Submit a SnowRegistration to Regobs.
 
         @param registration: A prepared SnowRegistation.
@@ -150,6 +150,9 @@ class Connection:
         """
         if not self.authenticated:
             raise NotAuthenticatedError("Connection not authenticated.")
+
+        if language is not None:
+            self.language = language
 
         if self.expires < TZ.localize(dt.datetime.now()) + dt.timedelta(seconds=60):
             return self.authenticate(self.username, self.password, self.client_id, self.token).submit(

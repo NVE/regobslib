@@ -2,8 +2,6 @@
 
 This client library aim to simplify interaction with the Regobs API v5.
 
-**Currently we only support registration submission via this client library.**
-
 ## Prerequisites
 
 * An API token for the test or prod environment, contact [regobs@nve.no](mailto:regobs@nve.no) to acquire this.
