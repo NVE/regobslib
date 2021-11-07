@@ -13,7 +13,8 @@ import datetime as dt
 
 import requests
 
-from .submit import SnowRegistration, Registration, ObsJson, Observer, Observation
+from .submit import SnowRegistration, Registration, ObsJson, Observer, Observation, Incident, AvalancheObs, DangerSign, \
+    AvalancheActivity, Weather, SnowCover, CompressionTest, SnowProfile, AvalancheProblem, DangerAssessment, Note
 from .misc import TZ, ApiError, NotAuthenticatedError, NoObservationError
 
 __author__ = 'arwi'
@@ -211,6 +212,21 @@ class Connection:
             raise ValueError("registration_type must be a subclass of Registration, it can not be Registration itself.")
         if not isinstance(reg_instance, Registration):
             raise ValueError("registration_type must be a subclass of Registration.")
+
+        if observation_types is None:
+            observation_types = [
+                Incident,
+                AvalancheObs,
+                DangerSign,
+                AvalancheActivity,
+                Weather,
+                SnowCover,
+                CompressionTest,
+                SnowProfile,
+                AvalancheProblem,
+                DangerAssessment,
+                Note,
+            ]
 
         if isinstance(reg_instance, SnowRegistration):
             query = {
