@@ -4,7 +4,6 @@ This client library aim to simplify interaction with the Regobs API v5.
 
 ## Prerequisites
 
-* An API token for the test or prod environment, contact [regobs@nve.no](mailto:regobs@nve.no) to acquire this.
 * A client ID for the test or prod environment, contact [regobs@nve.no](mailto:regobs@nve.no) to acquire this.
 * A user account for the test or prod environment. Register here:
   * Test environment: [https://test-konto.nve.no/](https://test-konto.nve.no/)
