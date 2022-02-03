@@ -13,6 +13,8 @@ import datetime as dt
 
 import requests
 
+from . import aps
+from .region import SnowRegion
 from .submit import SnowRegistration, Registration, ObsJson, Observer, Observation, Incident, AvalancheObs, DangerSign, \
     AvalancheActivity, Weather, SnowCover, CompressionTest, SnowProfile, AvalancheProblem, DangerAssessment, Note
 from .misc import TZ, ApiError, NotAuthenticatedError, NoObservationError
@@ -23,58 +25,7 @@ API_TEST = "https://test-api.regobs.no/v5"
 AUTH_TEST = "https://nveb2c01test.b2clogin.com/nveb2c01test.onmicrosoft.com/oauth2/v2.0/token?p=B2C_1_ROPC_Auth"
 API_PROD = "https://api.regobs.no/v5"
 AUTH_PROD = "https://nveb2c01prod.b2clogin.com/nveb2c01prod.onmicrosoft.com/oauth2/v2.0/token?p=B2C_1_ROPC_Auth"
-
-
-class Region(IntEnum):
-    pass
-
-
-class SnowRegion(Region):
-    SVALBARD_OST = 3001
-    SVALBARD_VEST = 3002
-    NORDENSKIOLD_LAND = 3003
-    SVALBARD_SOR = 3004
-    OST_FINNMARK = 3005
-    FINNMARKSKYSTEN = 3006
-    VEST_FINNMARK = 3007,
-    FINNMARKSVIDDA = 3008
-    NORD_TROMS = 3009
-    LYNGEN = 3010
-    TROMSO = 3011
-    SOR_TROMS = 3012
-    INDRE_TROMS = 3013
-    LOFOTEN_OG_VESTERALEN = 3014
-    OFOTEN = 3015
-    SALTEN = 3016
-    SVARTISEN = 3017
-    HELGELAND = 3018
-    NORD_TRONDELAG = 3019
-    SOR_TRONDELAG = 3020
-    YTRE_NORDMORE = 3021
-    TROLLHEIMEN = 3022
-    ROMSDAL = 3023
-    SUNNMORE = 3024
-    NORD_GUDBRANDSDALEN = 3025
-    YTRE_FJORDANE = 3026
-    INDRE_FJORDANE = 3027
-    JOTUNHEIMEN = 3028
-    INDRE_SOGN = 3029
-    VOSS = 3031
-    HALLINGDAL = 3032
-    HORDALANDSKYSTEN = 3033
-    HARDANGER = 3034
-    VEST_TELEMARK = 3035
-    ROGALANDSKYSTEN = 3036
-    HEIANE = 3037
-    AGDER_SOR = 3038
-    TELEMARKS_SOR = 3039
-    VESTFOLD = 3040
-    BUSKERUD_SOR = 3041
-    OPPLAND_SOR = 3042
-    HEDMARK = 3043
-    AKERSHUS = 3044
-    OSLO = 3045
-    OSTFOLD = 3046
+APS_PROD = "https://h-web03.nve.no/apsApi/TimeSeriesReader.svc/DistributionByDate/met_obs_v2.0"
 
 
 class Connection:
@@ -189,6 +140,42 @@ class Connection:
         if returned_reg.status_code != 200:
             raise ApiError(returned_reg.content)
         return SnowRegistration.deserialize(returned_reg.json())
+
+    def get_aps(self,
+                from_date: Optional[dt.date],
+                to_date: Optional[dt.date] = None,
+                regions: List[SnowRegion] = None) -> aps.Aps:
+        if to_date is None:
+            to_date = from_date
+        elif to_date <= from_date:
+            raise ValueError("to_date must not be before or equal to from_date")
+        if regions is None:
+            regions = [r for r in SnowRegion if r > SnowRegion.SVALBARD_SOR]
+        elif any([region <= SnowRegion.SVALBARD_SOR for region in regions]):
+            raise ValueError("APS download is not supported for Svalbard")
+        from_date -= dt.timedelta(days=1)
+        to_date -= dt.timedelta(days=2)
+
+        data = None
+        data_types = [
+            aps.Precip,
+            aps.PrecipMax,
+            aps.Temp,
+            aps.Wind,
+            aps.SnowDepth,
+            aps.NewSnow,
+            aps.NewSnowMax,
+        ]
+        for region in regions:
+            for data_type in data_types:
+                url = f"{APS_PROD}/{data_type.WEATHER_PARAM}/24/{region}/{from_date}/{to_date}"
+                response = self.session.get(url)
+                json = response.json()
+                if data is None:
+                    data = aps.Aps.deserialize(json, data_type)
+                else:
+                    data = data.assimilate(aps.Aps.deserialize(json, data_type))
+        return data
 
     def search(self,
                registration_type: Type[Registration],

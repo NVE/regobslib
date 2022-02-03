@@ -1896,8 +1896,8 @@ class Elevation(Serializable, Deserializable, Dictable):
         @param elev: The first elevation of the elevation band.
         @param elev_secondary: The second elevation of the elevation band.
         """
-        if not (0 <= elev <= 2500) or (elev_secondary is not None and not (0 <= elev_secondary <= 2500)):
-            raise ValueError("Elevations must be in the range 0--2500 m.a.s.l.")
+        if not (0 <= elev <= 4808) or (elev_secondary is not None and not (0 <= elev_secondary <= 4808)):
+            raise ValueError("Elevations must be in the range 0--4808 m.a.s.l.")
         if (elev_fmt == self.Format.ABOVE or elev_fmt == self.Format.BELOW) and elev_secondary is not None:
             raise ValueError("ABOVE and BELOW elevation formats does not use parameter elev_secondary.")
         elif (elev_fmt == self.Format.SANDWICH or elev_fmt == self.Format.MIDDLE) and elev_secondary is None:
