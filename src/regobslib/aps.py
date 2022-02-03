@@ -306,7 +306,7 @@ class Day(Deserializable, Dictable, Frameable):
         df = pd.DataFrame(levels)
         df.index.name = "elevation"
         df.name = self.date.isoformat()
-        df = df.loc[df.astype('bool').any(True)]
+        df = df.loc[df.astype('bool').any(axis=1)]
         df = df.loc[df.index != '0']
         return df
 
