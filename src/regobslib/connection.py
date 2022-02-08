@@ -132,8 +132,8 @@ class Connection:
     def get(self, registration_id: int) -> SnowRegistration:
         """Get a specific registration with a known id.
 
-        @param: registration_id: The ID of the sought registration
-        @return: The Snow
+        @param registration_id: The ID of the sought registration
+        @return: The SnowRegistration that were requested
         """
         url = f"{API_PROD if self.prod else API_TEST}/Registration/{registration_id}/{self.language}"
         returned_reg = self.session.get(url)
@@ -145,6 +145,13 @@ class Connection:
                 from_date: Optional[dt.date],
                 to_date: Optional[dt.date] = None,
                 regions: List[SnowRegion] = None) -> aps.Aps:
+        """Get timeline data from the Avalanche Problem Solver
+
+        @param from_date: The first date to include in the timeline
+        @param to_date: The first date to exclude out of the timline
+        @param regions: A list of regions to include
+        @return: A Collection of regions with timelines
+        """
         if to_date is None:
             to_date = from_date
         elif to_date <= from_date:

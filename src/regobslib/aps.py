@@ -182,6 +182,13 @@ class Container:
 
 
 class Aps(Container, Deserializable, Dictable, Frameable):
+    """A collection of regions with timelines of APS data
+
+    The object is indexable and iterable.
+
+    Structure:
+    Aps -> {SnowRegion: Timeline} -> {dt.Date: Day} -> [Level] -> Data
+    """
     _elems: OrderedDict[SnowRegion, Timeline]
 
     def to_dict(self) -> ApsDict:
@@ -232,6 +239,14 @@ class Aps(Container, Deserializable, Dictable, Frameable):
 
 
 class Timeline(Container, Deserializable, Dictable, Frameable):
+    """A collection of Days with APS data
+
+    The object is indexable and iterable.
+
+    Structure:
+    Timeline -> {dt.Date: Day} -> [Level] -> Data
+    """
+
     def to_dict(self) -> ApsDict:
         return {
             day.date.isoformat(): day.to_dict()
@@ -288,6 +303,11 @@ class Day(Deserializable, Dictable, Frameable):
     region: SnowRegion = None
 
     def __init__(self):
+        """A collection of Days with APS data
+
+        The day contains the attribute .levels, which is a list
+        of Levels.
+        """
         self.levels: List[Level] = []
 
     def to_dict(self) -> ApsDict:
@@ -357,6 +377,17 @@ class Level(Deserializable, Dictable):
     index: int = None
 
     def __init__(self):
+        """A collection of APS data attributes.
+
+        The data is available under the attributes:
+            .precip
+            .precip_max
+            .temp
+            .wind
+            .snow_depth
+            .new_snow
+            .new_snow_max
+        """
         for attr in WEATHER_ATTRS.values():
             setattr(self, attr, None)
 
