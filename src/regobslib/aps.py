@@ -151,9 +151,13 @@ class Container:
                 del self._elems[key]
         return self
 
-    def __getitem__(self, key: Union[Ordered, slice]) -> OrderedElements:
-        if not isinstance(key, slice):
+    def __getitem__(self, key: Union[Ordered, slice, List[Ordered]]) -> OrderedElements:
+        if not isinstance(key, slice) and not isinstance(key, list):
             return self._elems[key]
+        elif isinstance(key, list):
+            new_container = type(self)()
+            new_container._elems = OrderedDict({k: self._elems[k] for k in key})
+            return new_container
         else:
             if key.step != 1 and key.step is not None:
                 raise ValueError("step value can only be 1")
@@ -222,9 +226,11 @@ class Aps(Container, Deserializable, Dictable, Frameable):
     def _filter_empty(self) -> Aps:
         return cast(Aps, super()._filter_empty())
 
-    def __getitem__(self, key: Union[dt.date, SnowRegion, slice]) -> Union[Timeline, Aps]:
+    def __getitem__(self,
+                    key: Union[dt.date, SnowRegion, slice, List[dt.date], List[SnowRegion]]) -> Union[Timeline, Aps]:
         if isinstance(key, dt.date)\
-                or isinstance(key, slice) and (isinstance(key.start, dt.date) or isinstance(key.stop, dt.date)):
+                or isinstance(key, slice) and (isinstance(key.start, dt.date) or isinstance(key.stop, dt.date))\
+                or isinstance(key, list) and len(key) and isinstance(key[0], dt.date):
             aps = type(self)()
             for timeline in self:
                 aps[timeline.get_region()] = timeline[key]
@@ -288,7 +294,7 @@ class Timeline(Container, Deserializable, Dictable, Frameable):
     def _filter_empty(self) -> Timeline:
         return cast(Timeline, super()._filter_empty())
 
-    def __getitem__(self, key: Union[dt.date, slice]) -> Union[Day, Timeline]:
+    def __getitem__(self, key: Union[dt.date, slice, List[dt.date]]) -> Union[Day, Timeline]:
         return cast(Union[Day, Timeline], super().__getitem__(key))
 
     def __setitem__(self, key: Ordered, elem: OrderedElements):
