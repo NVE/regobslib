@@ -173,7 +173,6 @@ class Connection:
                 else:
                     until_date = to_date
                 url = f"{r_url}/{f_date.isoformat()}/{until_date.isoformat()}"
-                print(url)
                 response = self.session.get(url)
                 json = response.json()
                 if response.status_code != 200 or not isinstance(json, list):
@@ -228,7 +227,6 @@ class Connection:
                 retries = 0
                 while True:
                     url = f"{APS_PROD}/{data_type.WEATHER_PARAM}/24/{region}/{from_date}/{to_date}"
-                    print(url)
                     response = self.session.get(url)
                     if response.status_code != 200 and retries == 5:
                         response.raise_for_status()

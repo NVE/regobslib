@@ -72,6 +72,10 @@ class SnowVarsom(Container, VarsomDeserializable, Dictable, Frameable):
         }, names=["region", "date"])
         df.name = "snow_varsom"
         df = df.astype('float')
+        df.index = df.index.set_levels([
+            df.index.levels[0],
+            pd.to_datetime(df.index.levels[1]),
+        ])
         return df
 
     def to_dict(self) -> VarsomDict:
@@ -146,6 +150,7 @@ class Timeline(Container, VarsomDeserializable, Dictable, Frameable):
         df.index.name = "date"
         df.columns.set_names(["problem", "attr"])
         df.name = self.get_region()
+        df.index = pd.to_datetime(df.index)
         return df
 
     def to_dict(self) -> VarsomDict:
@@ -162,9 +167,7 @@ class Timeline(Container, VarsomDeserializable, Dictable, Frameable):
     @staticmethod
     def read_csv(filename: str) -> pd.DataFrame:
         df = pd.read_csv(filename, sep=";", header=[0, 1], index_col=[0])
-        df.index = df.index.set_levels([
-            pd.to_datetime(df.index.levels[0]),
-        ])
+        df.index = pd.to_datetime(df.index)
         return df
 
     @classmethod

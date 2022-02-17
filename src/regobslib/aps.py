@@ -155,6 +155,11 @@ class Aps(Container, Deserializable, Dictable, Frameable):
                       level=0,
                       kind='mergesort',
                       sort_remaining=False)
+        df.index = df.index.set_levels([
+            df.index.levels[0],
+            pd.to_datetime(df.index.levels[1]),
+            df.index.levels[2],
+        ])
         return df
 
     @staticmethod
@@ -240,6 +245,10 @@ class Timeline(Container, Deserializable, Dictable, Frameable):
                       level=0,
                       kind='mergesort',
                       sort_remaining=False)
+        df.index = df.index.set_levels([
+            pd.to_datetime(df.index.levels[0]),
+            df.index.levels[1],
+        ])
         return df
 
     def get_region(self) -> SnowRegion:
