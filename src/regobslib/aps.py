@@ -9,6 +9,7 @@ from typing import Union, Type, List, Dict, Optional, cast, Iterator
 
 from .region import SnowRegion
 from .submit import Dictable
+from .misc import Container, Ordered, OrderedElements
 
 ApsJsonData = Dict[str, Union[int, float]]
 ApsJsonRegion = Dict[str, Union[str, List[ApsJsonData]]]
@@ -26,9 +27,6 @@ ApsDict = Union[Dict[Union[str, int],
                                     'ApsDict']]],
                 List['ApsDict']]
 
-Ordered = Union[dt.date, int]
-OrderedElements = Union['Container', 'Day']
-
 
 class Deserializable:
     @classmethod
@@ -40,6 +38,13 @@ class Deserializable:
 
 class Frameable:
     def to_frame(self, elevation: int = None, level_index: int = None) -> pd.DataFrame:
+        raise NotImplementedError()
+
+    def to_csv(self, filename: str, elevation: int = None, level_index: int = None) -> Optional[str]:
+        return self.to_frame(elevation, level_index).to_csv(filename, sep=";")
+
+    @staticmethod
+    def read_csv(filename: str) -> pd.DataFrame:
         raise NotImplementedError()
 
 
@@ -68,7 +73,7 @@ class Data(Dictable):
 
     def to_series(self) -> pd.Series:
         series = pd.Series(self.to_dict())
-        series.index.set_names("percentile")
+        series.index = series.index.set_names("percentile")
         series.name = WEATHER_ATTRS[type(self)]
         return series
 
@@ -124,67 +129,6 @@ WEATHER_ATTRS: Dict[Type[Data], str] = {
 }
 
 
-class Container:
-    def __init__(self):
-        self._elems: OrderedDict[Ordered, OrderedElements] = OrderedDict()
-
-    def assimilate(self, other: Container) -> Container:
-        container = type(self)()
-        container._elems = OrderedDict(self._elems)
-        for key, elem in container._elems.items():
-            if key in other._elems:
-                container[key] = elem.assimilate(other[key])
-        for key, elem in other._elems.items():
-            if key not in container:
-                container[key] = elem
-        return container._sort()._filter_empty()
-
-    def _sort(self) -> Container:
-        keys = sorted(self._elems.keys())
-        for key in keys:
-            self._elems.move_to_end(key)
-        return self
-
-    def _filter_empty(self) -> Container:
-        for key in list(self._elems.keys()):
-            if not key:
-                del self._elems[key]
-        return self
-
-    def __getitem__(self, key: Union[Ordered, slice, List[Ordered]]) -> OrderedElements:
-        if not isinstance(key, slice) and not isinstance(key, list):
-            return self._elems[key]
-        elif isinstance(key, list):
-            new_container = type(self)()
-            new_container._elems = OrderedDict({k: self._elems[k] for k in key})
-            return new_container
-        else:
-            if key.step != 1 and key.step is not None:
-                raise ValueError("step value can only be 1")
-            new_container = type(self)()
-            for k, v in self._elems.items():
-                if all([key.start, key.stop]) and key.start <= k < key.stop \
-                        or key.start and not key.stop and key.start <= k \
-                        or key.stop and not key.start and k < key.stop:
-                    new_container[k] = v
-            return new_container._sort()._filter_empty()
-
-    def __setitem__(self, key: Ordered, elem: OrderedElements) -> None:
-        self._elems[key] = elem
-
-    def __iter__(self) -> Iterator[Container]:
-        return iter(self._elems.values())
-
-    def __contains__(self, key: Ordered) -> bool:
-        return key in self._elems
-
-    def __len__(self) -> int:
-        return len(self._elems)
-
-    def __bool__(self) -> bool:
-        return bool(self._elems)
-
-
 class Aps(Container, Deserializable, Dictable, Frameable):
     """A collection of regions with timelines of APS data
 
@@ -213,6 +157,21 @@ class Aps(Container, Deserializable, Dictable, Frameable):
                       sort_remaining=False)
         return df
 
+    @staticmethod
+    def read_csv(filename: str) -> pd.DataFrame:
+        df = pd.read_csv(filename, sep=";", header=[0, 1], index_col=[0, 1, 2])
+        df.index = df.index.set_levels([
+            df.index.levels[0],
+            pd.to_datetime(df.index.levels[1]),
+            df.index.levels[2],
+        ])
+        return df
+
+    @staticmethod
+    def parse_level(string):
+        l_min, l_max = [int(level) for level in string.split("-", 1)]
+        return l_min, l_max
+
     @classmethod
     def deserialize(cls, json: ApsJsonFull, data_type: Type[Data]) -> Aps:
         aps = cls()
@@ -228,8 +187,8 @@ class Aps(Container, Deserializable, Dictable, Frameable):
 
     def __getitem__(self,
                     key: Union[dt.date, SnowRegion, slice, List[dt.date], List[SnowRegion]]) -> Union[Timeline, Aps]:
-        if isinstance(key, dt.date)\
-                or isinstance(key, slice) and (isinstance(key.start, dt.date) or isinstance(key.stop, dt.date))\
+        if isinstance(key, dt.date) \
+                or isinstance(key, slice) and (isinstance(key.start, dt.date) or isinstance(key.stop, dt.date)) \
                 or isinstance(key, list) and len(key) and isinstance(key[0], dt.date):
             aps = type(self)()
             for timeline in self:
@@ -260,11 +219,23 @@ class Timeline(Container, Deserializable, Dictable, Frameable):
         }
 
     def to_frame(self, elevation: int = None, level_index: int = None) -> pd.DataFrame:
-        df = pd.concat({
-            day.date.isoformat(): self[day.date].to_frame(elevation, level_index)
-            for day in self if self[day.date]
-        }, names=["date", "elevation"])
+        """ Creates a DataFrame of the data.
+        """
+        # This was previously done by calling to_frame() on all contained objects
+        # but was rewritten due to performance issues.
+        levels = {
+            (day.date, lvl.get_name()): {
+                (data_type, attr_name): attr
+                for data_type, data in lvl.to_dict().items() if data for attr_name, attr in data.items()}
+            for day in self if day for lvl in day.levels
+            if elevation is None and level_index is None
+                or elevation and lvl.floor <= elevation and (not lvl.roof or elevation < lvl.roof)
+                or lvl.index == level_index
+        }
+        df = pd.DataFrame(levels).T
         df.name = self.get_region()
+        df.index = df.index.set_names(["date", "elevation"])
+        df.columns = df.columns.set_names(["data_type", "attr"])
         df.sort_index(inplace=True,
                       level=0,
                       kind='mergesort',
@@ -276,15 +247,20 @@ class Timeline(Container, Deserializable, Dictable, Frameable):
             raise ValueError("No days to find region from")
         return next(iter(self)).region
 
+    @staticmethod
+    def read_csv(filename: str) -> pd.DataFrame:
+        df = pd.read_csv(filename, sep=";", header=[0, 1], index_col=[0, 1])
+        df.index = df.index.set_levels([
+            pd.to_datetime(df.index.levels[0]),
+            df.index.levels[1],
+        ])
+        return df
+
     @classmethod
     def deserialize(cls, json: ApsJsonFull, data_type: Type[Data]) -> Timeline:
         timeline = cls()
-        min_date = None
-        max_date = None
         for day in json["TimeLine"]:
             date = dt.date.fromisoformat(day["FormattedDate"][:10])
-            min_date = min(min_date, date) if min_date else date
-            max_date = max(max_date, date) if max_date else date
             timeline[date] = Day.deserialize(day, data_type)
         return timeline
 
@@ -320,17 +296,20 @@ class Day(Deserializable, Dictable, Frameable):
         return [level.to_dict() for level in self.levels]
 
     def to_frame(self, elevation: int = None, level_index: int = None) -> pd.DataFrame:
-        if elevation and level_index:
+        if elevation is not None and level_index is not None:
             raise ValueError("Only one of elevation and level_index parameters can be defined")
-        levels = [
-            l.to_series()
-            for l in self.levels
-            if not (elevation or level_index)
-                or elevation and l.floor <= elevation and (not l.roof or elevation < l.roof)
-                or l.index == level_index
-        ]
-        df = pd.DataFrame(levels)
+        levels = {
+            lvl.get_name(): {
+                (data_type, attr_name): attr
+                for data_type, data in lvl.to_dict().items() if data for attr_name, attr in data.items()}
+            for lvl in self.levels
+            if elevation is None and level_index is None
+                or elevation and lvl.floor <= elevation and (not lvl.roof or elevation < lvl.roof)
+                or lvl.index == level_index
+        }
+        df = pd.DataFrame(levels).T
         df.index.name = "elevation"
+        df.columns = df.columns.set_names(["data_type", "attr"])
         df.name = self.date.isoformat()
         df = df.loc[df.astype('bool').any(axis=1)]
         df = df.loc[df.index != '0']
@@ -353,6 +332,10 @@ class Day(Deserializable, Dictable, Frameable):
                 level = self.levels[self_i].assimilate(other.levels[other_i])
                 day.levels.append(level)
         return day
+
+    @staticmethod
+    def read_csv(filename: str) -> pd.DataFrame:
+        return pd.read_csv(filename, sep=";", header=[0, 1], index_col=[0])
 
     @classmethod
     def deserialize(cls, json: ApsJsonDay, data_type: Type[Data]) -> Day:
@@ -416,8 +399,10 @@ class Level(Deserializable, Dictable):
         return str(self.floor) + (f"-{self.roof}" if self.roof else "")
 
     def assimilate(self, other: Level) -> Level:
+        def max_or_not_none(self_: int, other_: int):
+            return max(self_, other_) if self_ and other_ else self_ or other_
+
         level = Level()
-        max_or_not_none = lambda s, o: max(s, o) if s and o else s or o
         level.floor = max_or_not_none(self.floor, other.floor)
         level.roof = max_or_not_none(self.roof, other.roof)
         level.index = max_or_not_none(self.index, other.index)

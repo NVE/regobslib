@@ -6,6 +6,36 @@ from .misc import FloatEnum
 
 __author__ = 'arwi'
 
+
+class DangerLevel(IntEnum):
+    ONE_LOW = 1
+    TWO_MODERATE = 2
+    THREE_CONSIDERABLE = 3
+    FOUR_HIGH = 4
+    FIVE_EXTREME = 5
+
+
+class VarsomAvalancheProblem:
+    class Sensitivity(IntEnum):
+        HIGH_LOAD = 10
+        LOW_LOAD = 21
+        SPONTANEOUS = 22
+
+    class Probability(IntEnum):
+        UNLIKELY = 2
+        POSSIBLE = 3
+        LIKELY = 5
+
+    class Type(IntEnum):
+        NEW_LOOSE = 3
+        WET_LOOSE = 5
+        NEW_SLAB = 7
+        WIND_SLAB = 10
+        PWL_SLAB = 30
+        WET_SLAB = 45
+        GLIDE_SLAB = 50
+
+
 class Registration:
     GEO_HAZARD = None
 
@@ -323,12 +353,7 @@ class AvalancheProblem(SnowObservation):
 class DangerAssessment(SnowObservation):
     OBSERVATION_TYPE = SnowRegistration.ObservationType.DANGER_ASSESSMENT
 
-    class DangerLevel(IntEnum):
-        ONE_LOW = 1
-        TWO_MODERATE = 2
-        THREE_CONSIDERABLE = 3
-        FOUR_HIGH = 4
-        FIVE_EXTREME = 5
+    DangerLevel = DangerLevel
 
     class ForecastEvaluation(IntEnum):
         CORRECT = 1

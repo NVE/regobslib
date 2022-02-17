@@ -1591,3 +1591,6 @@ class Expositions(Serializable, Deserializable, Dictable):
             if valid:
                 expositions.append(Direction(i))
         return cls(expositions)
+
+    def __contains__(self, direction: Direction) -> bool:
+        return direction in self.expositions

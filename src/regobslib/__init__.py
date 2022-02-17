@@ -4,4 +4,6 @@ from .submit import SnowRegistration, DangerSign, AvalancheObs, AvalancheActivit
     CompressionTest, SnowProfile, AvalancheProblem, DangerAssessment, Incident, Note, Image, Url, \
     DestructiveSize, Sensitivity, Distribution, WeakLayer, Position, Elevation, Expositions, Direction, \
     LocalImage
+from .varsom import SnowVarsom
+from .aps import Aps
 from .misc import TZ as REGOBS_TZ

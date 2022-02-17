@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import pprint
+import sys
 from copy import deepcopy
 from typing import Type, Optional, Iterable, Iterator, Union, List
 
@@ -14,12 +15,15 @@ import datetime as dt
 import requests
 
 from . import aps
+from . import varsom
 from .region import SnowRegion
 from .submit import SnowRegistration, Registration, ObsJson, Observer, Observation, Incident, AvalancheObs, DangerSign, \
     AvalancheActivity, Weather, SnowCover, CompressionTest, SnowProfile, AvalancheProblem, DangerAssessment, Note
 from .misc import TZ, ApiError, NotAuthenticatedError, NoObservationError
 
 __author__ = 'arwi'
+
+from .varsom import SnowVarsom
 
 API_TEST = "https://test-api.regobs.no/v5"
 AUTH_TEST = "https://nveb2c01test.b2clogin.com/nveb2c01test.onmicrosoft.com/oauth2/v2.0/token?p=B2C_1_ROPC_Auth"
@@ -141,6 +145,52 @@ class Connection:
             raise ApiError(returned_reg.content)
         return SnowRegistration.deserialize(returned_reg.json())
 
+    def get_varsom(self,
+                from_date: Optional[dt.date],
+                to_date: Optional[dt.date] = None,
+                regions: List[SnowRegion] = None) -> varsom.SnowVarsom:
+        if to_date is None:
+            to_date = from_date
+        elif to_date <= from_date:
+            raise ValueError("to_date must not be before or equal to from_date")
+        if regions is None:
+            regions = [r for r in SnowRegion]
+        to_date -= dt.timedelta(days=1)
+
+        base_url = "https://api01.nve.no/hydrology/forecast/avalanche/v6.0.1/api"
+        if set(regions) == {r for r in SnowRegion}:
+            region_urls = [f"{base_url}/Warning/All/1"]
+        else:
+            region_urls = [f"{base_url}/Warning/Region/{r}/1" for r in regions]
+
+        data = []
+        for r_url in region_urls:
+            f_date = from_date
+            delta = delta_orig = 64
+            while True:
+                if to_date - f_date >= dt.timedelta(days=delta-1):
+                    until_date = f_date + dt.timedelta(days=delta-1)
+                else:
+                    until_date = to_date
+                url = f"{r_url}/{f_date.isoformat()}/{until_date.isoformat()}"
+                print(url)
+                response = self.session.get(url)
+                json = response.json()
+                if response.status_code != 200 or not isinstance(json, list):
+                    if delta > 1:
+                        delta = delta // 2
+                    else:
+                        print(f"Could not fetch (skipping):\n{url}", file=sys.stderr)
+                        f_date += dt.timedelta(days=1)
+                        delta = delta_orig
+                    continue
+                else:
+                    f_date += dt.timedelta(days=delta)
+                data += json
+                if to_date == until_date:
+                    break
+        return SnowVarsom.deserialize(data)
+
     def get_aps(self,
                 from_date: Optional[dt.date],
                 to_date: Optional[dt.date] = None,
@@ -175,13 +225,22 @@ class Connection:
         ]
         for region in regions:
             for data_type in data_types:
-                url = f"{APS_PROD}/{data_type.WEATHER_PARAM}/24/{region}/{from_date}/{to_date}"
-                response = self.session.get(url)
-                json = response.json()
-                if data is None:
-                    data = aps.Aps.deserialize(json, data_type)
-                else:
-                    data = data.assimilate(aps.Aps.deserialize(json, data_type))
+                retries = 0
+                while True:
+                    url = f"{APS_PROD}/{data_type.WEATHER_PARAM}/24/{region}/{from_date}/{to_date}"
+                    print(url)
+                    response = self.session.get(url)
+                    if response.status_code != 200 and retries == 5:
+                        response.raise_for_status()
+                    elif response.status_code != 200:
+                        retries += 1
+                        continue
+                    json = response.json()
+                    if data is None:
+                        data = aps.Aps.deserialize(json, data_type)
+                    else:
+                        data = data.assimilate(aps.Aps.deserialize(json, data_type))
+                    break
         return data
 
     def search(self,
