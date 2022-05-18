@@ -7,7 +7,8 @@ from __future__ import annotations
 import pprint
 import sys
 from copy import deepcopy
-from typing import Type, Optional, Iterable, Iterator, Union, List
+from functools import reduce
+from typing import Type, Optional, Iterable, Iterator, Union, List, Callable, Dict
 
 from enum import IntEnum
 import datetime as dt
@@ -30,6 +31,10 @@ AUTH_TEST = "https://nveb2c01test.b2clogin.com/nveb2c01test.onmicrosoft.com/oaut
 API_PROD = "https://api.regobs.no/v5"
 AUTH_PROD = "https://nveb2c01prod.b2clogin.com/nveb2c01prod.onmicrosoft.com/oauth2/v2.0/token?p=B2C_1_ROPC_Auth"
 APS_PROD = "https://h-web03.nve.no/apsApi/TimeSeriesReader.svc/DistributionByDate/met_obs_v2.0"
+APS_WIND_PROD = "https://h-web03.nve.no/APSapi/TimeSeriesReader.svc/WindDistributionByDate"
+
+ONE_DAY = dt.timedelta(days=1)
+TWO_DAYS = dt.timedelta(days=2)
 
 
 class Connection:
@@ -159,35 +164,15 @@ class Connection:
 
         base_url = "https://api01.nve.no/hydrology/forecast/avalanche/v6.0.1/api"
         if set(regions) == {r for r in SnowRegion}:
-            region_urls = [f"{base_url}/Warning/All/1"]
+            region_urls = [f"{base_url}/Archive/Warning/All/1"]
         else:
-            region_urls = [f"{base_url}/Warning/Region/{r}/1" for r in regions]
+            region_urls = [f"{base_url}/Archive/Warning/Region/{r}/1" for r in regions]
 
         data = []
         for r_url in region_urls:
-            f_date = from_date
-            delta = delta_orig = 64
-            while True:
-                if to_date - f_date >= dt.timedelta(days=delta-1):
-                    until_date = f_date + dt.timedelta(days=delta-1)
-                else:
-                    until_date = to_date
-                url = f"{r_url}/{f_date.isoformat()}/{until_date.isoformat()}"
-                response = self.session.get(url)
-                json = response.json()
-                if response.status_code != 200 or not isinstance(json, list):
-                    if delta > 1:
-                        delta = delta // 2
-                    else:
-                        print(f"Could not fetch (skipping):\n{url}", file=sys.stderr)
-                        f_date += dt.timedelta(days=1)
-                        delta = delta_orig
-                    continue
-                else:
-                    f_date += dt.timedelta(days=delta)
-                data += json
-                if to_date == until_date:
-                    break
+            url_format = lambda f, t: f"{r_url}/{f.isoformat()}/{t.isoformat()}/json"
+            jsons = get_period(from_date, to_date, url_format, delta=64)
+            data += reduce(lambda acc, json: acc + json, jsons, [])
         return SnowVarsom.deserialize(data)
 
     def get_aps(self,
@@ -201,6 +186,14 @@ class Connection:
         @param regions: A list of regions to include
         @return: A Collection of regions with timelines
         """
+        def get(url: str, retries: int = 0):
+            response = requests.get(url)
+            if response.status_code != 200 and retries == 5:
+                response.raise_for_status()
+            elif response.status_code != 200:
+                return get(url, retries + 1)
+            return response
+
         if to_date is None:
             to_date = from_date
         elif to_date <= from_date:
@@ -209,36 +202,28 @@ class Connection:
             regions = [r for r in SnowRegion if r > SnowRegion.SVALBARD_SOR]
         elif any([region <= SnowRegion.SVALBARD_SOR for region in regions]):
             raise ValueError("APS download is not supported for Svalbard")
-        from_date -= dt.timedelta(days=1)
-        to_date -= dt.timedelta(days=2)
 
         data = None
         data_types = [
             aps.Precip,
             aps.PrecipMax,
             aps.Temp,
-            aps.Wind,
             aps.SnowDepth,
             aps.NewSnow,
             aps.NewSnowMax,
         ]
         for region in regions:
             for data_type in data_types:
-                retries = 0
-                while True:
-                    url = f"{APS_PROD}/{data_type.WEATHER_PARAM}/24/{region}/{from_date}/{to_date}"
-                    response = self.session.get(url)
-                    if response.status_code != 200 and retries == 5:
-                        response.raise_for_status()
-                    elif response.status_code != 200:
-                        retries += 1
-                        continue
-                    json = response.json()
-                    if data is None:
-                        data = aps.Aps.deserialize(json, data_type)
-                    else:
-                        data = data.assimilate(aps.Aps.deserialize(json, data_type))
-                    break
+                aps_url = f"{APS_PROD}/{data_type.WEATHER_PARAM}/24/{region}/{from_date}/{to_date - ONE_DAY}"
+                json = get(aps_url).json()
+                if data is None:
+                    data = aps.Aps.deserialize(json, data_type)
+                else:
+                    data = data.assimilate(aps.Aps.deserialize(json, data_type))
+            url_formatter = lambda f, t: f"{APS_WIND_PROD}/{region}/{f.isoformat()}/{t.isoformat()}"
+            jsons = get_period(from_date, to_date - ONE_DAY, url_formatter, delta=128)
+            for json in jsons:
+                data = data.assimilate(aps.Aps.deserialize(json, aps.Wind))
         return data
 
     def search(self,
@@ -419,3 +404,38 @@ class Result(Iterable):
 
     def __str__(self) -> str:
         return pprint.pformat(list(map(lambda x: x.to_dict(), self)))
+
+def get_period(
+        from_date:dt.date,
+        to_date: dt.date,
+        url_format: Callable[[dt.date, dt.date], str],
+        delta: dt.timedelta = 64) -> List[Union[List, Dict]]:
+    responses = []
+    delta_orig = delta
+    f_date = from_date
+    while True:
+        if to_date - f_date >= dt.timedelta(days=delta - 1):
+            until_date = f_date + dt.timedelta(days=delta - 1)
+        else:
+            until_date = to_date
+        url = url_format(f_date, until_date)
+        response = requests.get(url)
+        if response.status_code == 200 and not response.content:
+            f_date += dt.timedelta(days=delta)
+            continue
+        status_200_404 = response.status_code == 200 or response.status_code == 404
+        json = response.json() if response.status_code == 200 else []
+        if not status_200_404 or not isinstance(json, list) and not isinstance(json, dict):
+            if delta > 1:
+                delta = delta // 2
+            else:
+                print(f"Could not fetch (skipping):\n{url}", file=sys.stderr)
+                f_date += dt.timedelta(days=1)
+                delta = delta_orig
+            continue
+        if json:
+            responses.append(json)
+        f_date += dt.timedelta(days=delta)
+        if to_date == until_date:
+            break
+    return responses

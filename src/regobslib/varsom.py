@@ -100,9 +100,7 @@ class SnowVarsom(Container, VarsomDeserializable, Dictable, Frameable):
             forecasts = [f for f in json if f["RegionId"] == region]
             timeline = Timeline.deserialize(forecasts)
             if timeline:
-                varsom._elems[region] = Timeline.deserialize(forecasts)
-        timeline = Timeline.deserialize(json)
-        varsom[timeline.get_region()] = timeline
+                varsom._elems[region] = timeline
         return varsom
 
     def _sort(self) -> SnowVarsom:
@@ -309,7 +307,7 @@ class AvalancheProblem(types.VarsomAvalancheProblem, Dictable, VarsomDeserializa
         type = cls._convert(json, "AvalancheProblemTypeId", cls.Type)
         # Handling for old problem DEEP_PWL_SLAB
         problem.type = type if type != 37 else cls.Type.PWL_SLAB
-        problem.size = cls._convert(json, "DestructiveSizeExtId", DestructiveSize)
+        problem.size = cls._convert(json, "DestructiveSizeId", DestructiveSize)
         problem.sensitivity = cls._convert(json, "AvalTriggerSimpleId", cls.Sensitivity)
         problem.distribution = cls._convert(json, "AvalPropagationId", Distribution)
         problem.probability = cls._convert(json, "AvalProbabilityId", cls.Probability)
