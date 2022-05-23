@@ -12,7 +12,7 @@ class SnowRegion(Region):
     SVALBARD_SOR = 3004
     OST_FINNMARK = 3005
     FINNMARKSKYSTEN = 3006
-    VEST_FINNMARK = 3007,
+    VEST_FINNMARK = 3007
     FINNMARKSVIDDA = 3008
     NORD_TROMS = 3009
     LYNGEN = 3010
@@ -51,6 +51,55 @@ class SnowRegion(Region):
     AKERSHUS = 3044
     OSLO = 3045
     OSTFOLD = 3046
+
+
+SVALBARD_REGIONS = [
+    SnowRegion.SVALBARD_OST,
+    SnowRegion.SVALBARD_VEST,
+    SnowRegion.NORDENSKIOLD_LAND,
+    SnowRegion.SVALBARD_SOR,
+]
+
+
+A_REGIONS = [
+    SnowRegion.NORDENSKIOLD_LAND,
+    SnowRegion.FINNMARKSKYSTEN,
+    SnowRegion.VEST_FINNMARK,
+    SnowRegion.NORD_TROMS,
+    SnowRegion.LYNGEN,
+    SnowRegion.TROMSO,
+    SnowRegion.SOR_TROMS,
+    SnowRegion.INDRE_TROMS,
+    SnowRegion.LOFOTEN_OG_VESTERALEN,
+    SnowRegion.OFOTEN,
+    SnowRegion.SALTEN,
+    SnowRegion.SVARTISEN,
+    SnowRegion.HELGELAND,
+    SnowRegion.TROLLHEIMEN,
+    SnowRegion.ROMSDAL,
+    SnowRegion.SUNNMORE,
+    SnowRegion.INDRE_FJORDANE,
+    SnowRegion.JOTUNHEIMEN,
+    SnowRegion.INDRE_SOGN,
+    SnowRegion.VOSS,
+    SnowRegion.HALLINGDAL,
+    SnowRegion.HARDANGER,
+    SnowRegion.VEST_TELEMARK,
+    SnowRegion.HEIANE,
+]
+
+
+A_REGIONS_MAINLAND = [
+    region for region in A_REGIONS if region not in SVALBARD_REGIONS
+]
+
+B_REGIONS = [
+    region for region in SnowRegion if region not in A_REGIONS
+]
+
+B_REGIONS_MAINLAND = [
+    region for region in B_REGIONS if region not in SVALBARD_REGIONS
+]
 
 
 REGION_ROOF = {

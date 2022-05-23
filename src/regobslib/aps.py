@@ -17,7 +17,7 @@ from .types import Direction
 ApsJsonData = Dict[str, Union[int, float, List[float]]]
 ApsJsonRegion = Dict[str, Union[str, List[ApsJsonData]]]
 ApsJsonDay = Dict[str, Union[str, bool, Union[List[ApsJsonRegion], ApsJsonData]]]
-ApsJsonFull = Dict[str, Union[str, List[ApsJsonDay]]]
+ApsJsonFull = Dict[str, Union[str, int, List[ApsJsonDay]]]
 ApsJson = Union[ApsJsonData,
                 ApsJsonRegion,
                 ApsJsonDay,
@@ -115,7 +115,7 @@ class SnowDepth(Data):
         data = super().deserialize(json)
         for percentile in PERCENTILES:
             attr = f"perc{str(percentile).rjust(2, '0')}"
-            val = getattr(data , attr)
+            val = getattr(data, attr)
             setattr(data, attr, val / 10)
         return cast(SnowDepth, data)
 
@@ -164,7 +164,7 @@ class Wind(Data):
     @classmethod
     def deserialize(cls, json: ApsJson):
         data = cls()
-        wind_sum = reduce(lambda acc, wak: acc + sum(json[wak[1]]), WIND_ATTR_KEYS, 0)
+        wind_sum = reduce(lambda a, wak: a + sum(json[wak[1]]), WIND_ATTR_KEYS, 0)
         for attr, key, _ in WIND_ATTR_KEYS:
             setattr(data, attr, {d: json[key][d] / wind_sum for d in Direction})
 
