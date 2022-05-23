@@ -2,19 +2,22 @@
 from __future__ import annotations
 
 import datetime as dt
+from copy import deepcopy
+from functools import reduce
 
 import pandas as pd
 from collections import OrderedDict
 from typing import Union, Type, List, Dict, Optional, cast, Iterator
 
-from .region import SnowRegion
+from .region import SnowRegion, REGION_ROOF
 from .submit import Dictable
 from .misc import Container, Ordered, OrderedElements
+from .types import Direction
 
-ApsJsonData = Dict[str, Union[int, float]]
+ApsJsonData = Dict[str, Union[int, float, List[float]]]
 ApsJsonRegion = Dict[str, Union[str, List[ApsJsonData]]]
-ApsJsonDay = Dict[str, Union[str, bool, List[ApsJsonRegion]]]
-ApsJsonFull = Dict[str, List[ApsJsonDay]]
+ApsJsonDay = Dict[str, Union[str, bool, Union[List[ApsJsonRegion], ApsJsonData]]]
+ApsJsonFull = Dict[str, Union[str, List[ApsJsonDay]]]
 ApsJson = Union[ApsJsonData,
                 ApsJsonRegion,
                 ApsJsonDay,
@@ -26,6 +29,8 @@ ApsDict = Union[Dict[Union[str, int],
                                     float,
                                     'ApsDict']]],
                 List['ApsDict']]
+
+PERCENTILES = [0, 5, 25, 50, 75, 95, 100]
 
 
 class Deserializable:
@@ -78,14 +83,14 @@ class Data(Dictable):
         return series
 
     @classmethod
-    def deserialize(cls, json: ApsJson):
+    def deserialize(cls, json: ApsJson) -> Data:
         data = cls()
         data.perc00 = json["Minimum"]
         data.perc05 = json["Perc05"]
         data.perc25 = json["FirstQuartile"]
         data.perc50 = json["Median"]
         data.perc75 = json["ThirdQuartile"]
-        data.perc95 = json["Perc05"]
+        data.perc95 = json["Perc95"]
         data.perc100 = json["Maximum"]
         return data
 
@@ -102,12 +107,17 @@ class Temp(Data):
     WEATHER_PARAM = 17
 
 
-class Wind(Data):
-    WEATHER_PARAM = 18
-
-
 class SnowDepth(Data):
     WEATHER_PARAM = 2002
+
+    @classmethod
+    def deserialize(cls, json: ApsJson) -> SnowDepth:
+        data = super().deserialize(json)
+        for percentile in PERCENTILES:
+            attr = f"perc{str(percentile).rjust(2, '0')}"
+            val = getattr(data , attr)
+            setattr(data, attr, val / 10)
+        return cast(SnowDepth, data)
 
 
 class NewSnow(Data):
@@ -116,6 +126,57 @@ class NewSnow(Data):
 
 class NewSnowMax(Data):
     WEATHER_PARAM = 2113
+
+
+WIND_ATTR_KEYS = [
+    ("calm", "Calm", 0),
+    ("breeze", "Breeze", 4),
+    ("fresh_breeze", "FreshBreeze", 9),
+    ("strong_breeze", "StrongBreeze", 12),
+    ("high_wind", "HighWind", 16),
+    ("gale", "Gale", 19),
+    ("strong_gale", "StrongGale", 23),
+    ("storm", "Storm", 26),
+    ("hurricane", "Hurricane", 33),
+]
+
+
+class Wind(Data):
+    WEATHER_PARAM = 18
+
+    def __init__(self):
+        super().__init__()
+        for attr, _, _ in WIND_ATTR_KEYS:
+            setattr(self, attr, None)
+
+    def to_dir_dict(self):
+        dirs = {d: 0 for d in Direction}
+        for attr, key, _ in WIND_ATTR_KEYS:
+            dirs = {d: dirs[d] + getattr(self, attr)[d] for d in Direction}
+        return dirs
+
+    def to_dir_series(self):
+        series = pd.Series(self.to_dir_dict())
+        series.index = series.index.set_names("wind_dir")
+        series.name = "wind_dir"
+        return series
+
+    @classmethod
+    def deserialize(cls, json: ApsJson):
+        data = cls()
+        wind_sum = reduce(lambda acc, wak: acc + sum(json[wak[1]]), WIND_ATTR_KEYS, 0)
+        for attr, key, _ in WIND_ATTR_KEYS:
+            setattr(data, attr, {d: json[key][d] / wind_sum for d in Direction})
+
+        percentiles = deepcopy(PERCENTILES)
+        acc = 0
+        for attr, _, speed in WIND_ATTR_KEYS:
+            acc += sum(getattr(data, attr).values())
+            while acc and percentiles and acc >= percentiles[0] / 100:
+                for p in percentiles:
+                    setattr(data, f"perc{str(p).zfill(2)}", speed)
+                percentiles.pop(0)
+        return data
 
 
 WEATHER_ATTRS: Dict[Type[Data], str] = {
@@ -139,15 +200,18 @@ class Aps(Container, Deserializable, Dictable, Frameable):
     """
     _elems: OrderedDict[SnowRegion, Timeline]
 
-    def to_dict(self) -> ApsDict:
+    def to_dict(self, with_wind_dir: bool = False) -> ApsDict:
         return {
-            timeline.get_region(): timeline.to_dict()
+            timeline.get_region(): timeline.to_dict(with_wind_dir)
             for timeline in self._sort()._filter_empty() if timeline
         }
 
-    def to_frame(self, elevation: int = None, level_index: int = None) -> pd.DataFrame:
+    def to_frame(self,
+                 with_wind_dir: bool = False,
+                 elevation: int = None,
+                 level_index: int = None) -> pd.DataFrame:
         df = pd.concat({
-            timeline.get_region(): timeline.to_frame(elevation, level_index)
+            timeline.get_region(): timeline.to_frame(with_wind_dir, elevation, level_index)
             for timeline in self._sort()._filter_empty() if timeline
         }, names=["region", "date", "elevation"])
         df.name = "aps"
@@ -192,14 +256,18 @@ class Aps(Container, Deserializable, Dictable, Frameable):
 
     def __getitem__(self,
                     key: Union[dt.date, SnowRegion, slice, List[dt.date], List[SnowRegion]]) -> Union[Timeline, Aps]:
-        if isinstance(key, dt.date) \
-                or isinstance(key, slice) and (isinstance(key.start, dt.date) or isinstance(key.stop, dt.date)) \
+        if isinstance(key, dt.date):
+            aps = type(self)()
+            for timeline in self:
+                aps[timeline.get_region()] = timeline[[key]]
+        elif isinstance(key, slice) and (isinstance(key.start, dt.date) or isinstance(key.stop, dt.date)) \
                 or isinstance(key, list) and len(key) and isinstance(key[0], dt.date):
             aps = type(self)()
             for timeline in self:
                 aps[timeline.get_region()] = timeline[key]
-            return aps
-        return cast(Union[Timeline, Aps], super().__getitem__(key))
+        else:
+            aps = cast(Union[Timeline, Aps], super().__getitem__(key))
+        return aps
 
     def __setitem__(self, key: SnowRegion, elem: Timeline) -> None:
         return super().__setitem__(key, elem)
@@ -216,14 +284,18 @@ class Timeline(Container, Deserializable, Dictable, Frameable):
     Structure:
     Timeline -> {dt.Date: Day} -> [Level] -> Data
     """
+    treeline: int = None
 
-    def to_dict(self) -> ApsDict:
+    def to_dict(self, with_wind_dir: bool = False) -> ApsDict:
         return {
-            day.date.isoformat(): day.to_dict()
+            day.date.isoformat(): day.to_dict(with_wind_dir)
             for day in self._sort()._filter_empty() if day
         }
 
-    def to_frame(self, elevation: int = None, level_index: int = None) -> pd.DataFrame:
+    def to_frame(self,
+                 with_wind_dir: bool = False,
+                 elevation: int = None,
+                 level_index: int = None) -> pd.DataFrame:
         """ Creates a DataFrame of the data.
         """
         # This was previously done by calling to_frame() on all contained objects
@@ -231,7 +303,8 @@ class Timeline(Container, Deserializable, Dictable, Frameable):
         levels = {
             (day.date, lvl.get_name()): {
                 (data_type, attr_name): attr
-                for data_type, data in lvl.to_dict().items() if data for attr_name, attr in data.items()}
+                for data_type, data in lvl.to_dict(with_wind_dir).items() if data
+                for attr_name, attr in data.items()}
             for day in self if day for lvl in day.levels
             if elevation is None and level_index is None
                 or elevation and lvl.floor <= elevation and (not lvl.roof or elevation < lvl.roof)
@@ -256,6 +329,10 @@ class Timeline(Container, Deserializable, Dictable, Frameable):
             raise ValueError("No days to find region from")
         return next(iter(self)).region
 
+    def assimilate(self, other: Timeline) -> Timeline:
+        self.treeline = self.treeline if self.treeline is not None else other.treeline
+        return cast(Timeline, super().assimilate(other))
+
     @staticmethod
     def read_csv(filename: str) -> pd.DataFrame:
         df = pd.read_csv(filename, sep=";", header=[0, 1], index_col=[0, 1])
@@ -270,7 +347,14 @@ class Timeline(Container, Deserializable, Dictable, Frameable):
         timeline = cls()
         for day in json["TimeLine"]:
             date = dt.date.fromisoformat(day["FormattedDate"][:10])
-            timeline[date] = Day.deserialize(day, data_type)
+            if data_type == Wind:
+                region = SnowRegion(int(float(json["RegionId"])))
+                treeline = json["AltitudeDivider"]
+                timeline[date] = Day.deserialize_wind(day, region, treeline)
+            else:
+                timeline[date] = Day.deserialize(day, data_type)
+        if data_type == Wind:
+            timeline.treeline = json["AltitudeDivider"]
         return timeline
 
     def _sort(self) -> Timeline:
@@ -301,16 +385,20 @@ class Day(Deserializable, Dictable, Frameable):
         """
         self.levels: List[Level] = []
 
-    def to_dict(self) -> ApsDict:
-        return [level.to_dict() for level in self.levels]
+    def to_dict(self, with_wind_dir: bool = False) -> ApsDict:
+        return [level.to_dict(with_wind_dir) for level in self.levels]
 
-    def to_frame(self, elevation: int = None, level_index: int = None) -> pd.DataFrame:
+    def to_frame(self,
+                 with_wind_dir: bool = False,
+                 elevation: int = None,
+                 level_index: int = None) -> pd.DataFrame:
         if elevation is not None and level_index is not None:
             raise ValueError("Only one of elevation and level_index parameters can be defined")
         levels = {
             lvl.get_name(): {
                 (data_type, attr_name): attr
-                for data_type, data in lvl.to_dict().items() if data for attr_name, attr in data.items()}
+                for data_type, data in lvl.to_dict(with_wind_dir).items() if data
+                for attr_name, attr in data.items()}
             for lvl in self.levels
             if elevation is None and level_index is None
                 or elevation and lvl.floor <= elevation and (not lvl.roof or elevation < lvl.roof)
@@ -338,7 +426,22 @@ class Day(Deserializable, Dictable, Frameable):
             for i in range(max(len(self.levels), len(other.levels))):
                 self_i = min(i, len(self.levels) - 1)
                 other_i = min(i, len(other.levels) - 1)
-                level = self.levels[self_i].assimilate(other.levels[other_i])
+                self_l = self.levels[self_i]
+                other_l = other.levels[other_i]
+                if self_l.wind or other_l.wind:
+                    if self_l.wind:
+                        wind_i, wind, wind_l, nowind_l = self_i, self, self_l, other_l
+                    else:
+                        wind_i, wind, wind_l, nowind_l = other_i, other, other_l, self_l
+                    while (wind_l.floor - nowind_l.floor) / (nowind_l.roof - nowind_l.floor) >= 0.5:
+                        wind_i -= 1
+                        wind_l = wind.levels[wind_i]
+                    wind_l = deepcopy(wind_l)
+                    wind_l.floor = nowind_l.floor
+                    wind_l.roof = nowind_l.roof
+                    level = wind_l.assimilate(nowind_l)
+                else:
+                    level = self_l.assimilate(other_l)
                 day.levels.append(level)
         return day
 
@@ -353,7 +456,7 @@ class Day(Deserializable, Dictable, Frameable):
             raise ValueError("No regions in timeline")
 
         day = cls()
-        day.date = dt.date.fromisoformat(json["FormattedDate"][:10])
+        day.date = dt.date.fromisoformat(json["FormattedDate"][:10]) - dt.timedelta(days=1)
         day.region = SnowRegion(int(region_list[0]["RegionId"]))
 
         elevation_list = region_list[0]["ElevationData"]
@@ -363,6 +466,29 @@ class Day(Deserializable, Dictable, Frameable):
         for level in elevation_list:
             day.levels.append(Level.deserialize(level, data_type))
 
+        return day
+
+    @classmethod
+    def deserialize_wind(cls, json: ApsJsonDay, region: SnowRegion, treeline: int):
+        day = cls()
+        day.date = dt.date.fromisoformat(json["FormattedDate"][:10]) - dt.timedelta(days=1)
+        day.region = region
+
+        day.levels.append(
+            Level.deserialize_wind(
+                json["DistributionBelowTreeline"],
+                0,
+                treeline if treeline else None
+            )
+        )
+        if treeline:
+            day.levels.append(
+                Level.deserialize_wind(
+                    json["DistributionAboveTreeline"],
+                    treeline,
+                    REGION_ROOF[region]
+                )
+            )
         return day
 
     def __bool__(self) -> bool:
@@ -389,18 +515,23 @@ class Level(Deserializable, Dictable):
         for attr in WEATHER_ATTRS.values():
             setattr(self, attr, None)
 
-    def to_dict(self) -> ApsDict:
+    def to_dict(self, with_wind_dir: bool = False) -> ApsDict:
         d = {}
         for attr in WEATHER_ATTRS.values():
             obj = getattr(self, attr)
             d[attr] = obj.to_dict() if obj else None
+        if with_wind_dir and self.wind:
+            d["wind_dir"] = self.wind.to_dir_dict()
         return d
 
-    def to_series(self) -> pd.Series:
-        series = pd.concat({
+    def to_series(self, with_wind_dir: bool = False) -> pd.Series:
+        d = {
             key: getattr(self, key).to_series()
             for key in self.to_dict().keys() if getattr(self, key)
-        }, names=["data_type", "attr"])
+        }
+        if with_wind_dir and self.wind:
+            d["wind_dir"] = self.wind.to_dir_series()
+        series = pd.concat(d, names=["data_type", "attr"])
         series.name = self.get_name()
         return series
 
@@ -445,6 +576,16 @@ class Level(Deserializable, Dictable):
             setattr(level, WEATHER_ATTRS[data_type], data_type.deserialize(json))
         else:
             raise ValueError("Unknown data_type")
+        return level
+
+    @classmethod
+    def deserialize_wind(cls, json: ApsJsonData, floor: int, roof: int) -> Level:
+        level = Level()
+        level.floor = floor
+        level.roof = roof
+        level.index = 1 if not floor else 2
+
+        setattr(level, WEATHER_ATTRS[Wind], Wind.deserialize(json))
         return level
 
     def __bool__(self) -> bool:
