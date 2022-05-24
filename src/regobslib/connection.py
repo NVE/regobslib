@@ -264,6 +264,16 @@ class Connection:
                 Note,
             ]
 
+        dates = {
+            "from_obs_time": from_obs_time,
+            "to_obs_time": to_obs_time,
+            "from_change_time": from_change_time,
+            "to_change_time": to_change_time,
+        }
+        for name, date in dates.items():
+            if isinstance(date, dt.datetime) or isinstance(date, dt.date):
+                dates[name] = date.isoformat()
+
         if isinstance(reg_instance, SnowRegistration):
             query = {
                 "SelectedGeoHazards": [registration_type.GEO_HAZARD],
@@ -272,10 +282,10 @@ class Connection:
                 "ObserverId": observer_id,
                 "ObserverCompetence": observer_competences,
                 "ObserverNickName": observer_nickname,
-                "FromDtObsTime": from_obs_time,
-                "ToDtObsTime": to_obs_time,
-                "FromDtChangeTime": from_change_time,
-                "ToDtChangeTime": to_change_time,
+                "FromDtObsTime": dates["from_obs_time"],
+                "ToDtObsTime": dates["to_obs_time"],
+                "FromDtChangeTime": dates["from_change_time"],
+                "ToDtChangeTime": dates["to_change_time"],
                 "SelectedRegions": regions,
                 "LocationId": location_id,
                 "TextSearch": text_search,
