@@ -10,6 +10,7 @@ import datetime as dt
 import mimetypes
 import re
 
+from . import SnowRegion
 from .misc import TZ, NoObservationError
 from .types import DestructiveSize, Sensitivity, Distribution, WeakLayer, Direction
 import regobslib.types as types
@@ -346,6 +347,7 @@ class SnowRegistration(types.SnowRegistration, Registration):
         position = object.__new__(Position)
         position.lat = json["ObsLocation"]["Latitude"]
         position.lon = json["ObsLocation"]["Longitude"]
+        position.region = cls._convert(json["ObsLocation"], "ForecastRegionTID", SnowRegion)
         source = cls._convert(json, "SourceTID", cls.Source)
         spatial_precision = cls._convert(json["ObsLocation"], "Uncertainty", cls.SpatialPrecision)
         reg = cls(obs_time, position, spatial_precision, source)
@@ -1473,6 +1475,7 @@ class Position(Dictable):
 
         self.lat = lat
         self.lon = lon
+        self.region = None
 
     def __repr__(self):
         rep = [
@@ -1485,6 +1488,7 @@ class Position(Dictable):
         return {
             "lat": self.lat,
             "lon": self.lon,
+            "region": None,
         }
 
 
