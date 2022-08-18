@@ -24,6 +24,7 @@ VarsomDict = dict
 T = TypeVar('T')
 U = TypeVar('U')
 
+
 class Frameable:
     def to_problem_frame(self) -> pd.DataFrame:
         raise NotImplementedError()
@@ -65,9 +66,9 @@ class SnowVarsom(Container, VarsomDeserializable, Dictable, Frameable):
     """
     _elems: OrderedDict[SnowRegion, Timeline]
 
-    def to_problem_frame(self) -> pd.Frame:
+    def to_problem_frame(self, with_priorities: bool = False) -> pd.Frame:
         df = pd.concat({
-            timeline.get_region(): timeline.to_problem_frame()
+            timeline.get_region(): timeline.to_problem_frame(with_priorities)
             for timeline in self
         }, names=["region", "date"])
         df.name = "snow_varsom"
@@ -77,6 +78,19 @@ class SnowVarsom(Container, VarsomDeserializable, Dictable, Frameable):
             pd.to_datetime(df.index.levels[1]),
         ])
         return df
+
+    def to_danger_level_series(self):
+        series = pd.concat({
+            timeline.get_region(): timeline.to_danger_level_series()
+            for timeline in self
+        }, names=["region", "date"])
+        series.name = "danger_level"
+        series = series.astype('float')
+        series.index = series.index.set_levels([
+            series.index.levels[0],
+            pd.to_datetime(series.index.levels[1]),
+        ])
+        return series
 
     def to_dict(self) -> VarsomDict:
         return {
@@ -140,9 +154,9 @@ class Timeline(Container, VarsomDeserializable, Dictable, Frameable):
     Timeline -> {dt.Date: Day} -> [Level] -> Data
     """
 
-    def to_problem_frame(self) -> pd.Frame:
+    def to_problem_frame(self, with_priorities: bool = False) -> pd.Frame:
         df = pd.concat({
-            forecast.date.isoformat(): forecast.to_problem_series()
+            forecast.date.isoformat(): forecast.to_problem_series(with_priorities)
             for forecast in self
         }, axis=1).T
         df.index.name = "date"
@@ -150,6 +164,12 @@ class Timeline(Container, VarsomDeserializable, Dictable, Frameable):
         df.name = self.get_region()
         df.index = pd.to_datetime(df.index)
         return df
+
+    def to_danger_level_series(self):
+        return pd.Series({
+            forecast.date.isoformat(): forecast.danger_level
+            for forecast in self
+        }, name="danger_level")
 
     def to_dict(self) -> VarsomDict:
         return {
@@ -202,9 +222,9 @@ class AvalancheForecast(Dictable, VarsomDeserializable):
         self.emergency_warning = None
         self.problems = []
 
-    def to_problem_series(self) -> pd.Series:
+    def to_problem_series(self, with_priorities: bool = False) -> pd.Series:
         serieses = {}
-        for problem in self.problems:
+        for priority, problem in enumerate(self.problems):
             try:
                 name = problem.type.name.lower()
             except AttributeError:
@@ -214,18 +234,21 @@ class AvalancheForecast(Dictable, VarsomDeserializable):
                 if problem.type is None:
                     continue
                 name = problem.type
-            serieses[name] = problem.to_series(REGION_ROOF[self.region])
+            priority = priority + 1 if with_priorities else None
+            serieses[name] = problem.to_series(REGION_ROOF[self.region], priority)
         if self.problems and serieses:
             series = pd.concat(serieses)
         else:
             series = pd.Series(dtype=float)
         problems = [p.name.lower() for p in AvalancheProblem.Type]
-        attrs = ["size", "sensitivity", "distribution", "probability", "elevation_min", "elevation_max"]
+        attrs = ["priority"] if with_priorities else []
+        attrs += ["size", "sensitivity", "distribution", "probability", "elevation_min", "elevation_max"]
         attrs += [f"exposition_{e}" for e in ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]]
         index = pd.MultiIndex.from_product([problems, attrs], names=["problem", "attr"])
         series = series.reindex(index)
         series.name = "forecast"
         return series
+
 
     def to_dict(self) -> VarsomDict:
         return {
@@ -258,7 +281,7 @@ class AvalancheProblem(types.VarsomAvalancheProblem, Dictable, VarsomDeserializa
         self.expositions = None
         self.elevation = None
 
-    def to_series(self, roof: int = 2500) -> pd.Series:
+    def to_series(self, roof: int = 2500, with_priority: int = None) -> pd.Series:
         elev_min, elev_max = {
             Elevation.Format.ABOVE: lambda e: (e.elev_max, roof),
             Elevation.Format.BELOW: lambda e: (0, e.elev_max),
@@ -266,22 +289,24 @@ class AvalancheProblem(types.VarsomAvalancheProblem, Dictable, VarsomDeserializa
             Elevation.Format.MIDDLE: lambda e: (e.elev_min, e.elev_max),
         }.get(self.elevation.format, lambda e: (None, None))(self.elevation)
 
-        dictionary = {
-            "size": self.size,
-            "sensitivity": self.sensitivity,
-            "distribution": self.distribution,
-            "probability": self.probability,
-            "elevation_min": elev_min,
-            "elevation_max": elev_max,
-            "exposition_N": Direction.N in self.expositions if self.expositions else None,
-            "exposition_NE": Direction.NE in self.expositions if self.expositions else None,
-            "exposition_E": Direction.E in self.expositions if self.expositions else None,
-            "exposition_SE": Direction.SE in self.expositions if self.expositions else None,
-            "exposition_S": Direction.S in self.expositions if self.expositions else None,
-            "exposition_SW": Direction.SW in self.expositions if self.expositions else None,
-            "exposition_W": Direction.W in self.expositions if self.expositions else None,
-            "exposition_NW": Direction.NW in self.expositions if self.expositions else None,
-        }
+        dictionary = {}
+        if with_priority is not None:
+            dictionary["priority"] = with_priority
+        dictionary["size"] = self.size
+        dictionary["sensitivity"] = self.sensitivity
+        dictionary["distribution"] = self.distribution
+        dictionary["probability"] = self.probability
+        dictionary["elevation_min"] = elev_min
+        dictionary["elevation_max"] = elev_max
+        dictionary["exposition_N"] = Direction.N in self.expositions if self.expositions else None
+        dictionary["exposition_NE"] = Direction.NE in self.expositions if self.expositions else None
+        dictionary["exposition_E"] = Direction.E in self.expositions if self.expositions else None
+        dictionary["exposition_SE"] = Direction.SE in self.expositions if self.expositions else None
+        dictionary["exposition_S"] = Direction.S in self.expositions if self.expositions else None
+        dictionary["exposition_SW"] = Direction.SW in self.expositions if self.expositions else None
+        dictionary["exposition_W"] = Direction.W in self.expositions if self.expositions else None
+        dictionary["exposition_NW"] = Direction.NW in self.expositions if self.expositions else None
+
         series = pd.Series(dictionary)
         series.index.set_names("attr")
         try:

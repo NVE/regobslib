@@ -51,7 +51,7 @@ class Container:
             return self._elems[key]
         elif isinstance(key, list):
             new_container = type(self)()
-            new_container._elems = OrderedDict({k: self._elems[k] for k in key})
+            new_container._elems = OrderedDict({k: self._elems[k] for k in key if k in self._elems})
             return new_container
         elif isinstance(key, slice):
             if key.step != 1 and key.step is not None:

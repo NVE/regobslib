@@ -110,15 +110,6 @@ class Temp(Data):
 class SnowDepth(Data):
     WEATHER_PARAM = 2002
 
-    @classmethod
-    def deserialize(cls, json: ApsJson) -> SnowDepth:
-        data = super().deserialize(json)
-        for percentile in PERCENTILES:
-            attr = f"perc{str(percentile).rjust(2, '0')}"
-            val = getattr(data, attr)
-            setattr(data, attr, val / 10)
-        return cast(SnowDepth, data)
-
 
 class NewSnow(Data):
     WEATHER_PARAM = 2013
