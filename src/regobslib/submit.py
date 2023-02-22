@@ -289,6 +289,16 @@ class SnowRegistration(types.SnowRegistration, Registration):
             raise ValueError("Invalid type for parent_registration_type.")
         return self
 
+    def set_observer(self, observer: Observer) -> SnowRegistration:
+        """Set an Observer. Previously set Observer will be overwritten.
+
+        @param observer: The Observer to set.
+        @return: self, with the Observer set.
+        """
+        self.any_obs = True
+        self.observer = observer
+        return self
+
     def to_dict(self) -> ObsDict:
         return {
             "obs_time": self.obs_time,
@@ -330,6 +340,8 @@ class SnowRegistration(types.SnowRegistration, Registration):
             'GeneralObservation': self.note.serialize() if self.note is not None else None,
             'GeoHazardTID': 10,
             'Incident': self.incident.serialize() if self.incident is not None else None,
+            'ObserverGroupID': self.observer.id if self.observer is not None else None,
+            'ObserverGroupName': self.observer.nickname if self.observer is not None else None,
             'ObsLocation': self._clean({
                 'Latitude': self.position.lat,
                 'Longitude': self.position.lon,
@@ -1493,9 +1505,9 @@ class Position(Dictable):
 
 
 class Observer(types.Observer, Dictable):
-    nickname = None
-    id = None
-    competence = None
+    nickname: str | None = None
+    id: str | None = None
+    competence: types.Observer.Competence | None = None
 
     def to_dict(self) -> ObsDict:
         return {
