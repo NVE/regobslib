@@ -30,8 +30,8 @@ API_TEST = "https://test-api.regobs.no/v5"
 AUTH_TEST = "https://nveb2c01test.b2clogin.com/nveb2c01test.onmicrosoft.com/oauth2/v2.0/token?p=B2C_1_ROPC_Auth"
 API_PROD = "https://api.regobs.no/v5"
 AUTH_PROD = "https://nveb2c01prod.b2clogin.com/nveb2c01prod.onmicrosoft.com/oauth2/v2.0/token?p=B2C_1_ROPC_Auth"
-APS_PROD = "https://h-web03.nve.no/apsApi/TimeSeriesReader.svc/DistributionByDate/met_obs_v2.0"
-APS_WIND_PROD = "https://h-web03.nve.no/APSapi/TimeSeriesReader.svc/WindDistributionByDate"
+APS_PROD = "https://h-web.nve.no/APSWebApi/TimeSeries/DistributionByDate"
+APS_WIND_PROD = "https://h-web.nve.no/APSWebApi/TimeSeries/WindDistributionByDate"
 
 ONE_DAY = dt.timedelta(days=1)
 TWO_DAYS = dt.timedelta(days=2)
