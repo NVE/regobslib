@@ -214,12 +214,14 @@ class Connection:
         ]
         for region in regions:
             for data_type in data_types:
-                aps_url = f"{APS_PROD}/{data_type.WEATHER_PARAM}/24/{region}/{from_date}/{to_date - ONE_DAY}"
-                json = get(aps_url).json()
-                if data is None:
-                    data = aps.Aps.deserialize(json, data_type)
-                else:
-                    data = data.assimilate(aps.Aps.deserialize(json, data_type))
+                w_param = data_type.WEATHER_PARAM
+                url_formatter = lambda f, t: f"{APS_PROD}/{w_param}/24/{region}/{f.isoformat()}/{t.isoformat()}"
+                jsons = get_period(from_date, to_date - ONE_DAY, url_formatter, delta=128)
+                for json in jsons:
+                    if data is None:
+                        data = aps.Aps.deserialize(json, data_type)
+                    else:
+                        data = data.assimilate(aps.Aps.deserialize(json, data_type))
             url_formatter = lambda f, t: f"{APS_WIND_PROD}/{region}/{f.isoformat()}/{t.isoformat()}"
             jsons = get_period(from_date, to_date - ONE_DAY, url_formatter, delta=128)
             for json in jsons:

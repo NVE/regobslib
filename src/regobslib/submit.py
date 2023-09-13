@@ -1500,7 +1500,7 @@ class Position(Dictable):
         return {
             "lat": self.lat,
             "lon": self.lon,
-            "region": None,
+            "region": self.region,
         }
 
 

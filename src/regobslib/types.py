@@ -17,14 +17,12 @@ class DangerLevel(IntEnum):
 
 class VarsomAvalancheProblem:
     class Sensitivity(IntEnum):
-        HIGH_LOAD = 10
-        LOW_LOAD = 21
-        SPONTANEOUS = 22
+        VERY_DIFFICULT = 10
+        DIFFICULT = 20
+        EASY = 30
+        VERY_EASY = 40
+        SPONTANEOUS = 45
 
-    class Probability(IntEnum):
-        UNLIKELY = 2
-        POSSIBLE = 3
-        LIKELY = 5
 
     class Type(IntEnum):
         NEW_LOOSE = 3

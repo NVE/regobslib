@@ -36,7 +36,6 @@ class Frameable:
     def read_csv(filename: str) -> pd.DataFrame:
         raise NotImplementedError()
 
-
 class VarsomDeserializable(Deserializable):
     @classmethod
     def deserialize(cls, json: VarsomJson) -> VarsomDeserializable:
@@ -46,7 +45,7 @@ class VarsomDeserializable(Deserializable):
     def _convert(json: VarsomJson, idx: str, target: Type[T], target_sec: Optional[Type[U]] = int) -> Union[T, U]:
         elem = json[idx] if idx in json else None
         try:
-            return target(elem) if elem else None
+            return target(target_sec(elem)) if elem else None
         except ValueError:
             return target_sec(elem)
 
@@ -72,7 +71,6 @@ class SnowVarsom(Container, VarsomDeserializable, Dictable, Frameable):
             for timeline in self
         }, names=["region", "date"])
         df.name = "snow_varsom"
-        df = df.astype('float')
         df.index = df.index.set_levels([
             df.index.levels[0],
             pd.to_datetime(df.index.levels[1]),
@@ -85,7 +83,6 @@ class SnowVarsom(Container, VarsomDeserializable, Dictable, Frameable):
             for timeline in self
         }, names=["region", "date"])
         series.name = "danger_level"
-        series = series.astype('float')
         series.index = series.index.set_levels([
             series.index.levels[0],
             pd.to_datetime(series.index.levels[1]),
@@ -169,7 +166,7 @@ class Timeline(Container, VarsomDeserializable, Dictable, Frameable):
         return pd.Series({
             forecast.date.isoformat(): forecast.danger_level
             for forecast in self
-        }, name="danger_level")
+        }, name="danger_level", dtype=float)
 
     def to_dict(self) -> VarsomDict:
         return {
@@ -242,7 +239,7 @@ class AvalancheForecast(Dictable, VarsomDeserializable):
             series = pd.Series(dtype=float)
         problems = [p.name.lower() for p in AvalancheProblem.Type]
         attrs = ["priority"] if with_priorities else []
-        attrs += ["size", "sensitivity", "distribution", "probability", "elevation_min", "elevation_max"]
+        attrs += ["size", "sensitivity", "distribution", "elevation_min", "elevation_max"]
         attrs += [f"exposition_{e}" for e in ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]]
         index = pd.MultiIndex.from_product([problems, attrs], names=["problem", "attr"])
         series = series.reindex(index)
@@ -277,7 +274,6 @@ class AvalancheProblem(types.VarsomAvalancheProblem, Dictable, VarsomDeserializa
         self.size = None
         self.sensitivity = None
         self.distribution = None
-        self.probability = None
         self.expositions = None
         self.elevation = None
 
@@ -295,7 +291,6 @@ class AvalancheProblem(types.VarsomAvalancheProblem, Dictable, VarsomDeserializa
         dictionary["size"] = self.size
         dictionary["sensitivity"] = self.sensitivity
         dictionary["distribution"] = self.distribution
-        dictionary["probability"] = self.probability
         dictionary["elevation_min"] = elev_min
         dictionary["elevation_max"] = elev_max
         dictionary["exposition_N"] = Direction.N in self.expositions if self.expositions else None
@@ -321,7 +316,6 @@ class AvalancheProblem(types.VarsomAvalancheProblem, Dictable, VarsomDeserializa
             "size": self.size,
             "sensitivity": self.sensitivity,
             "distribution": self.distribution,
-            "probability": self.probability,
             "expositions": self.expositions.to_dict(),
             "elevation": self.elevation.to_dict(),
         }
@@ -333,9 +327,16 @@ class AvalancheProblem(types.VarsomAvalancheProblem, Dictable, VarsomDeserializa
         # Handling for old problem DEEP_PWL_SLAB
         problem.type = type if type != 37 else cls.Type.PWL_SLAB
         problem.size = cls._convert(json, "DestructiveSizeId", DestructiveSize)
-        problem.sensitivity = cls._convert(json, "AvalTriggerSimpleId", cls.Sensitivity)
+        sensitivity = cls._convert(json, "AvalTriggerSensitivityId", cls.Sensitivity)
+        problem.sensitivity = sensitivity = {
+            0: None,
+            35: 45,
+            80: 45,
+            70: 45,
+            60: 45,
+            50: 45,
+        }.get(sensitivity, sensitivity)
         problem.distribution = cls._convert(json, "AvalPropagationId", Distribution)
-        problem.probability = cls._convert(json, "AvalProbabilityId", cls.Probability)
         problem.expositions = cls._deserialize_to(json, "ValidExpositions", Expositions)
 
         elevation = {
