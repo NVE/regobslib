@@ -162,7 +162,7 @@ class Connection:
             regions = [r for r in SnowRegion]
         to_date -= dt.timedelta(days=1)
 
-        base_url = "https://api01.nve.no/hydrology/forecast/avalanche/v6.0.1/api"
+        base_url = "https://api01.nve.no/hydrology/forecast/avalanche/v6.2.1/api"
         if set(regions) == {r for r in SnowRegion}:
             region_urls = [f"{base_url}/Archive/Warning/All/1"]
         else:

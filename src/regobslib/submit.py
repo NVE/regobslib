@@ -1610,3 +1610,9 @@ class Expositions(Serializable, Deserializable, Dictable):
 
     def __contains__(self, direction: Direction) -> bool:
         return direction in self.expositions
+
+    def __iter__(self):
+        return iter(self.expositions)
+
+    def __len__(self):
+        return len(self.expositions)
