@@ -291,11 +291,11 @@ class SnowRegistration(types.SnowRegistration, Registration):
 
     def set_observer(self, observer: Observer) -> SnowRegistration:
         """Set an Observer. Previously set Observer will be overwritten.
+           Everything except GroupID will be disregarded by the API.
 
         @param observer: The Observer to set.
         @return: self, with the Observer set.
         """
-        self.any_obs = True
         self.observer = observer
         return self
 
@@ -340,8 +340,7 @@ class SnowRegistration(types.SnowRegistration, Registration):
             'GeneralObservation': self.note.serialize() if self.note is not None else None,
             'GeoHazardTID': 10,
             'Incident': self.incident.serialize() if self.incident is not None else None,
-            'ObserverGroupID': self.observer.id if self.observer is not None else None,
-            'ObserverGroupName': self.observer.nickname if self.observer is not None else None,
+            'ObserverGroupID': self.observer.group_id if self.observer is not None else None,
             'ObsLocation': self._clean({
                 'Latitude': self.position.lat,
                 'Longitude': self.position.lon,
@@ -371,6 +370,8 @@ class SnowRegistration(types.SnowRegistration, Registration):
             observer.id = cls._convert(json["Observer"], "ObserverID", int)
             observer.nickname = cls._convert(json["Observer"], "NickName", str)
             observer.competence = cls._convert(json["Observer"], "CompetenceLevelTID", Observer.Competence)
+            observer.group_name = cls._convert(json, "ObserverGroupName", str)
+            observer.group_id = cls._convert(json, "ObserverGroupID", int)
             reg.observer = observer
 
         reg.danger_signs = cls._apply(json, "DangerObs", lambda x: list(map(lambda y: DangerSign.deserialize(y), x)))
@@ -1505,15 +1506,21 @@ class Position(Dictable):
 
 
 class Observer(types.Observer, Dictable):
-    nickname: str | None = None
-    id: str | None = None
-    competence: types.Observer.Competence | None = None
+    nickname = None
+    id = None
+    competence = None
+    group_name = None
+
+    def __init__(self, group_id: Optional[int] = None):
+        self.group_id = group_id
 
     def to_dict(self) -> ObsDict:
         return {
             "nickname": self.nickname,
             "id": self.id,
             "competence": self.competence,
+            "group_id": self.group_id,
+            "group_name": self.group_name
         }
 
 
