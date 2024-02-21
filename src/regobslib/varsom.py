@@ -330,11 +330,11 @@ class AvalancheProblem(types.VarsomAvalancheProblem, Dictable, VarsomDeserializa
         sensitivity = cls._convert(json, "AvalTriggerSensitivityId", cls.Sensitivity)
         problem.sensitivity = sensitivity = {
             0: None,
-            35: 45,
-            80: 45,
-            70: 45,
-            60: 45,
-            50: 45,
+            35: cls.Sensitivity(45),
+            80: cls.Sensitivity(45),
+            70: cls.Sensitivity(45),
+            60: cls.Sensitivity(45),
+            50: cls.Sensitivity(45),
         }.get(sensitivity, sensitivity)
         problem.distribution = cls._convert(json, "AvalPropagationId", Distribution)
         problem.expositions = cls._deserialize_to(json, "ValidExpositions", Expositions)

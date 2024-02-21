@@ -1575,7 +1575,7 @@ class Elevation(types.Elevation, Serializable, Deserializable, Dictable):
         elev = cls._convert(json, "ExposedHeight1", int)
         elev_secondary = cls._convert(json, "ExposedHeight2", int)
 
-        if elev_secondary is not None:
+        if elev_fmt in [3, 4]:
             elevation.elev_max = max(elev, elev_secondary)
             elevation.elev_min = min(elev, elev_secondary)
         else:
