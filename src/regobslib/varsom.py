@@ -264,7 +264,10 @@ class AvalancheForecast(Dictable, VarsomDeserializable):
         forecast.emergency_warning = cls._apply(json,
                                                 "EmergencyWarning",
                                                 lambda w: w == "Naturlig utløste skred")
-        forecast.problems = [AvalancheProblem.deserialize(p) for p in json["AvalancheProblems"]]
+        forecast.problems = [
+            AvalancheProblem.deserialize(p) for p
+            in sorted(json["AvalancheProblems"], key=lambda p: p['AvalancheProblemId'])
+        ]
         return forecast
 
 
