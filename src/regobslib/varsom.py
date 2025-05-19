@@ -12,7 +12,8 @@ from . import types
 from .misc import Container, Ordered, OrderedElements
 from .region import SnowRegion, REGION_ROOF
 from .submit import Dictable, Expositions, Elevation, Deserializable
-from .types import DangerLevel, DestructiveSize, Distribution, Direction
+from .types import DangerLevel, DestructiveSize, Distribution, Direction, \
+    WeakLayer
 
 VarsomJsonProb = Dict[str, Union[int, str]]
 VarsomJsonReg = Dict[str, Union[int, str, List['VarsomJsonReg'], 'VarsomJsonReg']]
@@ -279,6 +280,7 @@ class AvalancheProblem(types.VarsomAvalancheProblem, Dictable, VarsomDeserializa
         self.distribution = None
         self.expositions = None
         self.elevation = None
+        self.weak_layer = None
 
     def to_series(self, roof: int = 2500, with_priority: int = None) -> pd.Series:
         elev_min, elev_max = {
@@ -294,6 +296,7 @@ class AvalancheProblem(types.VarsomAvalancheProblem, Dictable, VarsomDeserializa
         dictionary["size"] = self.size
         dictionary["sensitivity"] = self.sensitivity
         dictionary["distribution"] = self.distribution
+        dictionary["weak_layer"] = self.weak_layer
         dictionary["elevation_min"] = elev_min
         dictionary["elevation_max"] = elev_max
         dictionary["exposition_N"] = Direction.N in self.expositions if self.expositions else None
@@ -319,6 +322,7 @@ class AvalancheProblem(types.VarsomAvalancheProblem, Dictable, VarsomDeserializa
             "size": self.size,
             "sensitivity": self.sensitivity,
             "distribution": self.distribution,
+            "weak_layer": self.weak_layer,
             "expositions": self.expositions.to_dict(),
             "elevation": self.elevation.to_dict(),
         }
@@ -330,6 +334,7 @@ class AvalancheProblem(types.VarsomAvalancheProblem, Dictable, VarsomDeserializa
         # Handling for old problem DEEP_PWL_SLAB
         problem.type = type if type != 37 else cls.Type.PWL_SLAB
         problem.size = cls._convert(json, "DestructiveSizeId", DestructiveSize)
+        problem.weak_layer = cls._convert(json, "AvalCauseId", WeakLayer)
         sensitivity = cls._convert(json, "AvalTriggerSensitivityId", cls.Sensitivity)
         problem.sensitivity = sensitivity = {
             0: None,

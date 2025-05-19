@@ -162,7 +162,7 @@ class Connection:
             regions = [r for r in SnowRegion]
         to_date -= dt.timedelta(days=1)
 
-        base_url = "https://api01.nve.no/hydrology/forecast/avalanche/v6.2.1/api"
+        base_url = "https://api01.nve.no/hydrology/forecast/avalanche/v6.3.0/api"
         if set(regions) == {r for r in SnowRegion}:
             region_urls = [f"{base_url}/Archive/Warning/All/1"]
         else:
@@ -233,6 +233,7 @@ class Connection:
                observation_types: Optional[List[Type[Observation]]] = None,
                observer_competences: Optional[List[Observer.Competence]] = None,
                regions: Optional[List[SnowRegion]] = None,
+               countries: Optional[List[int]] = None,
                from_obs_time: Optional[dt.datetime] = None,
                to_obs_time: Optional[dt.datetime] = None,
                from_change_time: Optional[dt.datetime] = None,
@@ -289,6 +290,7 @@ class Connection:
                 "FromDtChangeTime": dates["from_change_time"],
                 "ToDtChangeTime": dates["to_change_time"],
                 "SelectedRegions": regions,
+                "Countries": countries,
                 "LocationId": location_id,
                 "TextSearch": text_search,
             }
