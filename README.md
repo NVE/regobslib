@@ -85,3 +85,12 @@ alternatives.
 
 You can also use GitHubs built-in code navigation to quickly find the
 definition of a class or method in the [example code](https://github.com/NVE/regobslib/blob/master/demo.py).
+
+## Developer notes
+
+The package is built according to the instructions in the
+[Python Packaging User Guide](https://packaging.python.org/en/latest/tutorials/packaging-projects/).
+
+For serialization/deserialisation, most of the Regobs work is done in `src/regobslib/submit.py`.
+The project rely heavily on enums. These are available in `src/regobslib/types.py`.
+Any outside connections (Regobs, Varsom, APS) is handled in `src/regobslib/connection.py`.
