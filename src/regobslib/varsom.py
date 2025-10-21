@@ -215,10 +215,13 @@ class AvalancheForecast(Dictable, VarsomDeserializable):
         self.region = None
         self.primary_region = None
         self.date = None
-
         self.danger_level = None
         self.emergency_warning = None
         self.problems = []
+        self.snow_surface = None
+        self.current_weak_layers = None
+        self.latest_avalanche_activity = None
+        self.latest_observations = None 
 
     def to_problem_series(self, with_priorities: bool = False) -> pd.Series:
         serieses = {}
@@ -269,6 +272,10 @@ class AvalancheForecast(Dictable, VarsomDeserializable):
             AvalancheProblem.deserialize(p) for p
             in sorted(json["AvalancheProblems"], key=lambda p: p['AvalancheProblemId'])
         ]
+        forecast.snow_surface = json["SnowSurface"]
+        forecast.current_weak_layers = json["CurrentWeaklayers"]
+        forecast.latest_avalanche_activity = json["LatestAvalancheActivity"]
+        forecast.latest_observations = json["LatestObservations"] 
         return forecast
 
 

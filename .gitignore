@@ -2,3 +2,5 @@ dist
 src/*.egg-info
 .idea
 *.csv
+build
+.vscode
